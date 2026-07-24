@@ -101,10 +101,15 @@
 
   .sub-h{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:1.35rem 0 .6rem;font-weight:600}
 
-  /* terminal-style code block */
-  pre.term{background:var(--panel);border:.5px solid var(--line);border-radius:12px;padding:1rem 1.1rem;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.75;color:var(--ink);margin:1rem 0;white-space:pre}
+  /* macOS terminal-window code block */
+  .termwin{margin:1rem 0;border:.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);box-shadow:0 1px 2px rgba(20,30,60,.04)}
+  .termbar{position:relative;display:flex;align-items:center;padding:.5rem .8rem;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line)}
+  .termbar .dots{width:11px;height:11px;border-radius:50%;background:var(--tl-r);box-shadow:16px 0 0 var(--tl-y),32px 0 0 var(--tl-g)}
+  .termbar .tt{position:absolute;left:0;right:0;text-align:center;font-family:var(--mono);font-size:.68rem;font-weight:600;color:var(--ink-3);letter-spacing:.02em;pointer-events:none}
+  pre.term{margin:0;background:transparent;border:0;border-radius:0;padding:1rem 1.1rem;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.75;color:var(--ink);white-space:pre}
   pre.term .c{color:var(--ink-3)}
   pre.term .k{color:var(--accent-ink);font-weight:600}
+  pre.term .p{color:var(--green)}
 
   .table-wrap{overflow-x:auto;margin-top:1.25rem;border:.5px solid var(--line);border-radius:16px}
   table{border-collapse:collapse;width:100%;min-width:480px;font-size:.9rem;background:var(--card)}
@@ -202,11 +207,11 @@
         <div class="method">
           <div class="m-head"><span class="m-badge">경우 A</span><h3>비어 있는 경우 — clone</h3><span class="m-pill ok">가장 간단</span></div>
           <p class="m-desc">리포를 스킬 디렉토리 위치로 그대로 내려받습니다.</p>
-<pre class="term"><span class="c"># macOS / Linux</span>
+<div class="termwin"><div class="termbar"><span class="dots"></span><span class="tt">새 PC 설치 — Terminal</span></div><pre class="term"><span class="c"># macOS / Linux</span>
 <span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git ~/.claude/skills
 
 <span class="c"># Windows (PowerShell)</span>
-<span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git "$env:USERPROFILE\.claude\skills"</pre>
+<span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git "$env:USERPROFILE\.claude\skills"</pre></div>
         </div>
 
         <div class="note info">
@@ -259,7 +264,7 @@
           <figcaption>로컬 스킬을 먼저 커밋한 뒤, 리포를 <code>fetch</code>해 <code>merge</code>로 합치고 <code>push</code>합니다. 이후 이 PC도 리포의 작업본이 됩니다.</figcaption>
         </figure>
 
-<pre class="term"><span class="c"># 스킬 디렉토리로 이동  (Windows: cd "$env:USERPROFILE\.claude\skills")</span>
+<div class="termwin"><div class="termbar"><span class="dots"></span><span class="tt">~/.claude/skills — Terminal</span></div><pre class="term"><span class="c"># 스킬 디렉토리로 이동  (Windows: cd "$env:USERPROFILE\.claude\skills")</span>
 cd ~/.claude/skills
 
 <span class="c"># 1) git 저장소로 초기화하고 로컬 스킬을 먼저 커밋</span>
@@ -273,7 +278,7 @@ cd ~/.claude/skills
 <span class="k">git merge</span> origin/main --allow-unrelated-histories -m "merge TY_claude_skills"
 
 <span class="c"># 3) 합쳐진 결과를 올림</span>
-<span class="k">git push</span> -u origin main</pre>
+<span class="k">git push</span> -u origin main</pre></div>
 
         <div class="note warn">
           <span class="lbl">충돌이 나는 경우</span>
@@ -282,9 +287,9 @@ cd ~/.claude/skills
 
         <p class="sub-h">대안 — 병합이 번거로울 때</p>
         <p>리포를 임시 폴더에 clone → 올릴 스킬 폴더만 복사 → commit/push 해도 됩니다. 단, 이 방식은 그 PC의 <code>~/.claude/skills</code>를 리포 작업본으로 만들지는 않습니다.</p>
-<pre class="term"><span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git /tmp/ty_skills
+<div class="termwin"><div class="termbar"><span class="dots"></span><span class="tt">임시 clone — Terminal</span></div><pre class="term"><span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git /tmp/ty_skills
 cp -r ~/.claude/skills/&lt;올릴-스킬&gt; /tmp/ty_skills/
-cd /tmp/ty_skills &amp;&amp; <span class="k">git add</span> -A &amp;&amp; <span class="k">git commit</span> -m "add &lt;올릴-스킬&gt;" &amp;&amp; <span class="k">git push</span></pre>
+cd /tmp/ty_skills &amp;&amp; <span class="k">git add</span> -A &amp;&amp; <span class="k">git commit</span> -m "add &lt;올릴-스킬&gt;" &amp;&amp; <span class="k">git push</span></pre></div>
       </section>
 
       <!-- 4. 평상시 관리 -->
@@ -318,13 +323,13 @@ cd /tmp/ty_skills &amp;&amp; <span class="k">git add</span> -A &amp;&amp; <span 
           <figcaption>이 순환만 지키면 여러 PC가 항상 같은 상태를 유지합니다.</figcaption>
         </figure>
 
-<pre class="term">cd ~/.claude/skills
+<div class="termwin"><div class="termbar"><span class="dots"></span><span class="tt">평상시 관리 — Terminal</span></div><pre class="term">cd ~/.claude/skills
 
 <span class="k">git pull</span>                    <span class="c"># 다른 PC에서 올린 최신 스킬 받기</span>
 <span class="c"># … 스킬 수정 또는 새로 만든 뒤 …</span>
 <span class="k">git add</span> -A
 <span class="k">git commit</span> -m "update: &lt;내용&gt;"
-<span class="k">git push</span></pre>
+<span class="k">git push</span></pre></div>
       </section>
 
       <!-- 5. 수록 스킬 & 새 스킬 -->

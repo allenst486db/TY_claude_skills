@@ -12,6 +12,7 @@
 - [예시 (ex)](#예시-ex)
 - [비교표 (table)](#비교표-table)
 - [체크리스트 (check)](#체크리스트-check)
+- [코드블록 / 터미널 (termwin)](#코드블록--터미널-termwin)
 
 ---
 
@@ -165,3 +166,27 @@
   <div class="ck"><span class="box">✓</span><div><strong>전제 파일이 있는가</strong> — 이유.</div></div>
 </div>
 ```
+
+---
+
+## 코드블록 / 터미널 (termwin)
+
+여러 줄 명령·코드는 macOS 터미널 창처럼 보여준다. `.termwin`(창) > `.termbar`
+(트래픽 라이트 + 가운데 타이틀) > `pre.term`(본문) 구조. 타이틀에는 맥락을 넣으면
+좋다(작업 이름이나 작업 경로, 예: `~/.claude/skills — Terminal`).
+
+`pre.term` 안에서 인라인 `<span>`으로 의미를 색으로 구분한다:
+`.c`=주석(회색), `.k`=명령/키워드(파랑), `.p`=프롬프트/강조(초록). HTML이므로
+`<`, `&`는 `&lt;`, `&amp;`로 이스케이프한다. 들여쓰기·줄바꿈은 `pre`가 그대로 살린다.
+
+```html
+<div class="termwin">
+  <div class="termbar"><span class="dots"></span><span class="tt">~/.claude/skills — Terminal</span></div>
+  <pre class="term"><span class="c"># 주석</span>
+<span class="k">git pull</span>
+<span class="k">git add</span> -A &amp;&amp; <span class="k">git commit</span> -m "update: &lt;내용&gt;"
+<span class="k">git push</span></pre>
+</div>
+```
+
+> 한 줄짜리 명령이나 파일명·플래그는 이 무거운 블록 대신 인라인 `<code>…</code>`를 쓴다.
