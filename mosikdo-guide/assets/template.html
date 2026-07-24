@@ -1,0 +1,245 @@
+<!-- ============================================================
+  모식도 가이드 · macOS Schematic Guide — 시작 템플릿
+  - Artifact 게시 시: 아래 <title>+<style>+본문만 사용 (doctype/html/head/body 래퍼 제거)
+  - 로컬 .html 저장 시: 그대로 브라우저에서 렌더링됨
+  - 토큰(:root 변수)과 클래스는 건드리지 말고 본문(.content 내부)만 채운다
+  - 색은 반드시 var(--...)로. 하드코딩 금지(SVG 노드 안 의도된 #fff 글자는 예외)
+============================================================ -->
+<title>모식도 가이드 — 제목을 여기에</title>
+<style>
+  :root {
+    /* desktop wallpaper */
+    --desk-1:#DCE3F0; --desk-2:#C7D2E8; --desk-3:#E7ECF6;
+    /* window / surfaces */
+    --win-solid:#FFFFFF; --bar:rgba(246,246,248,.8);
+    --panel:#F5F5F7; --card:#FFFFFF;
+    /* ink */
+    --ink:#1D1D1F; --ink-2:#55555A; --ink-3:#86868B;
+    --line:#E3E3E6; --line-soft:#EEEEF0;
+    /* accent (신규/기준 = 파랑) */
+    --accent:#007AFF; --accent-ink:#0060DF; --accent-soft:#E7F0FF;
+    /* semantic: green=가능, orange=주의, red=불가 */
+    --green:#1EA64A; --green-soft:#E4F6EA;
+    --orange:#C77700; --orange-soft:#FBEEDA;
+    --red:#E0352B; --red-soft:#FCE9E8;
+    /* categorical (서로 다른 대상 구분용) */
+    --purple:#8E44D0; --cyan:#0AA2C0; --pink:#E0356B;
+    /* traffic lights */
+    --tl-r:#FF5F57; --tl-y:#FEBC2E; --tl-g:#28C840;
+    --shadow:0 40px 80px -20px rgba(20,30,60,.35),0 12px 32px -8px rgba(20,30,60,.22);
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,"SF Mono","Menlo","Consolas",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --desk-1:#101318; --desk-2:#05070B; --desk-3:#1A1F27;
+      --win-solid:#1C1C1E; --bar:rgba(40,40,43,.72);
+      --panel:#2C2C2E; --card:#2C2C2E;
+      --ink:#F5F5F7; --ink-2:#B0B0B6; --ink-3:#8A8A8F;
+      --line:#3A3A3C; --line-soft:#323234;
+      --accent:#0A84FF; --accent-ink:#5AB0FF; --accent-soft:#14304F;
+      --green:#30D158; --green-soft:#12331F;
+      --orange:#FF9F0A; --orange-soft:#3A2A10;
+      --red:#FF453A; --red-soft:#3A1A18;
+      --purple:#BF5AF2; --cyan:#5AC8FA; --pink:#FF375F;
+      --shadow:0 40px 90px -20px rgba(0,0,0,.7),0 12px 32px -8px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"]{--desk-1:#DCE3F0;--desk-2:#C7D2E8;--desk-3:#E7ECF6;--win-solid:#FFFFFF;--bar:rgba(246,246,248,.8);--panel:#F5F5F7;--card:#FFFFFF;--ink:#1D1D1F;--ink-2:#55555A;--ink-3:#86868B;--line:#E3E3E6;--line-soft:#EEEEF0;--accent:#007AFF;--accent-ink:#0060DF;--accent-soft:#E7F0FF;--green:#1EA64A;--green-soft:#E4F6EA;--orange:#C77700;--orange-soft:#FBEEDA;--red:#E0352B;--red-soft:#FCE9E8;--purple:#8E44D0;--cyan:#0AA2C0;--pink:#E0356B;--shadow:0 40px 80px -20px rgba(20,30,60,.35),0 12px 32px -8px rgba(20,30,60,.22);}
+  :root[data-theme="dark"]{--desk-1:#101318;--desk-2:#05070B;--desk-3:#1A1F27;--win-solid:#1C1C1E;--bar:rgba(40,40,43,.72);--panel:#2C2C2E;--card:#2C2C2E;--ink:#F5F5F7;--ink-2:#B0B0B6;--ink-3:#8A8A8F;--line:#3A3A3C;--line-soft:#323234;--accent:#0A84FF;--accent-ink:#5AB0FF;--accent-soft:#14304F;--green:#30D158;--green-soft:#12331F;--orange:#FF9F0A;--orange-soft:#3A2A10;--red:#FF453A;--red-soft:#3A1A18;--purple:#BF5AF2;--cyan:#5AC8FA;--pink:#FF375F;--shadow:0 40px 90px -20px rgba(0,0,0,.7),0 12px 32px -8px rgba(0,0,0,.5);}
+
+  *{box-sizing:border-box}
+  body{margin:0}
+  .desktop{
+    min-height:100vh;
+    background:radial-gradient(1200px 700px at 12% -10%,var(--desk-3),transparent 60%),linear-gradient(150deg,var(--desk-1),var(--desk-2));
+    padding:clamp(.75rem,3.5vw,3rem) clamp(.5rem,3vw,2.5rem);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+    display:flex; justify-content:center;
+  }
+  .window{
+    width:100%; max-width:900px;
+    background:var(--win-solid); border-radius:14px;
+    box-shadow:var(--shadow); overflow:hidden;
+    border:.5px solid rgba(255,255,255,.16);
+    animation:winIn .5s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes winIn{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.window{animation:none}}
+
+  .titlebar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; gap:.75rem;
+    padding:.8rem 1.1rem; background:var(--bar);
+    -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:.5px solid var(--line);
+  }
+  .traffic{display:flex;gap:8px}
+  .traffic i{width:12px;height:12px;border-radius:50%;display:block}
+  .traffic .r{background:var(--tl-r)}.traffic .y{background:var(--tl-y)}.traffic .g{background:var(--tl-g)}
+  .tb-title{flex:1;text-align:center;font-size:.8rem;font-weight:600;color:var(--ink-2);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:52px}
+
+  .content{
+    padding:clamp(1.5rem,4vw,3rem) clamp(1rem,4.5vw,3.25rem) 3.5rem;
+    color:var(--ink); font-size:16.5px; line-height:1.72; letter-spacing:-.003em;
+  }
+  .content>*{max-width:46rem;margin-left:auto;margin-right:auto}
+
+  .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 .9rem}
+  h1{font-size:clamp(1.85rem,4.6vw,2.7rem);font-weight:700;line-height:1.12;letter-spacing:-.028em;text-wrap:balance;margin:0 0 1rem}
+  .lede{font-size:1.08rem;color:var(--ink-2);margin:0;text-wrap:pretty}
+
+  section{margin-top:3.5rem}
+  .sec-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.55rem}
+  .sec-num{font-family:var(--mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--accent);width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .kicker{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0}
+  h2{font-size:clamp(1.3rem,2.9vw,1.65rem);font-weight:700;line-height:1.25;letter-spacing:-.02em;text-wrap:balance;margin:0 0 1rem}
+  h3{font-size:1.1rem;font-weight:700;letter-spacing:-.015em;margin:0}
+  p{margin:0 0 1.05rem}
+  p:last-child{margin-bottom:0}
+  strong{font-weight:600}
+  .hl{color:var(--accent-ink);font-weight:600}
+  code{font-family:var(--mono);font-size:.84em;background:var(--panel);padding:.12em .42em;border-radius:5px;color:var(--accent-ink)}
+
+  /* callouts: info / warn / danger / ok / plain */
+  .note{border-radius:14px;padding:1.05rem 1.3rem;margin:1.25rem 0;font-size:.95rem;line-height:1.62}
+  .note .lbl{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;font-weight:600}
+  .note p{margin:0 0 .55rem}.note p:last-child{margin:0}
+  .note.info{background:var(--accent-soft);color:var(--ink-2)} .note.info .lbl{color:var(--accent-ink)} .note.info strong{color:var(--accent-ink)}
+  .note.warn{background:var(--orange-soft);color:var(--ink-2)} .note.warn .lbl{color:var(--orange)} .note.warn strong{color:var(--orange)}
+  .note.danger{background:var(--red-soft);color:var(--ink-2)} .note.danger .lbl{color:var(--red)} .note.danger strong{color:var(--red)}
+  .note.ok{background:var(--green-soft);color:var(--ink-2)} .note.ok .lbl{color:var(--green)} .note.ok strong{color:var(--green)}
+  .note.plain{background:var(--panel);color:var(--ink-2)} .note.plain .lbl{color:var(--ink-3)} .note.plain strong{color:var(--ink)}
+
+  /* condition cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin:1.25rem 0}
+  .cd{background:var(--panel);border-radius:13px;padding:.9rem 1.05rem}
+  .cd .t{font-size:.86rem;font-weight:700;margin-bottom:.2rem;letter-spacing:-.01em}
+  .cd .d{font-size:.8rem;color:var(--ink-3);line-height:1.5}
+
+  /* figures / diagrams */
+  figure{margin:1.5rem 0;padding:1.25rem;background:var(--card);border:.5px solid var(--line);border-radius:16px}
+  .fig-scroll{overflow-x:auto}
+  .fig-scroll svg{display:block;width:100%;min-width:640px;height:auto}
+  .dg text{font-family:var(--sans)}
+  .dg .ttl{font-size:12.5px;font-weight:700;fill:var(--ink)}
+  .dg .lbl{font-size:11px;font-weight:600;fill:var(--ink-2)}
+  .dg .cap{font-size:9.5px;fill:var(--ink-3)}
+  .dg .nd{fill:var(--panel);stroke:var(--line)}
+  .dg .nd-a{fill:var(--card);stroke:var(--accent);stroke-width:1.5}
+  .dg .ar{stroke:var(--ink-3);stroke-width:1.5;fill:none;marker-end:url(#ah)}
+  .dg .ar-d{stroke:var(--ink-3);stroke-width:1.4;fill:none;stroke-dasharray:4 4;marker-end:url(#ah)}
+  figcaption{margin-top:.9rem;font-size:.83rem;color:var(--ink-3);text-align:center;line-height:1.5}
+  .scroll-hint{display:none;font-size:.72rem;color:var(--ink-3);text-align:right;margin-bottom:.4rem;font-family:var(--mono)}
+  @media (max-width:680px){.scroll-hint{display:block}}
+
+  /* method blocks */
+  .method{background:var(--card);border:.5px solid var(--line);border-radius:16px;padding:1.5rem 1.5rem;margin:1.1rem 0}
+  .m-head{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:.45rem}
+  .m-badge{font-family:var(--mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--accent);padding:.2rem .55rem;border-radius:7px}
+  .m-badge.alt{background:var(--ink-3)}
+  .m-pill{font-size:.7rem;font-weight:600;padding:.18rem .58rem;border-radius:999px}
+  .m-pill.ok{background:var(--green-soft);color:var(--green)}
+  .m-pill.warn{background:var(--orange-soft);color:var(--orange)}
+  .m-pill.no{background:var(--red-soft);color:var(--red)}
+  .m-desc{color:var(--ink-2);margin:.4rem 0 1.1rem;font-size:.96rem}
+
+  /* bullet lists: default / warn / no */
+  .pts{list-style:none;margin:0;padding:0}
+  .pts li{position:relative;padding-left:1.3rem;margin-bottom:.55rem;font-size:.94rem;color:var(--ink-2);line-height:1.6}
+  .pts li:last-child{margin-bottom:0}
+  .pts li::before{content:"";position:absolute;left:.15rem;top:.66em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+  .pts li.warn::before{background:var(--orange)}
+  .pts li.no::before{background:var(--red)}
+  .pts li strong{color:var(--ink)}
+
+  .sub-h{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:1.35rem 0 .6rem;font-weight:600}
+
+  /* examples */
+  .ex{display:flex;gap:.7rem;align-items:flex-start;background:var(--panel);border-radius:11px;padding:.7rem .9rem;margin-bottom:.5rem;font-size:.88rem;color:var(--ink-2);line-height:1.55}
+  .ex:last-child{margin-bottom:0}
+  .ex .n{font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);padding:.12rem .45rem;border-radius:5px;flex:0 0 auto;margin-top:.12rem}
+  .ex.bad .n{color:var(--red);background:var(--red-soft)}
+  .ex strong{color:var(--ink)}
+
+  /* grouped table */
+  .table-wrap{overflow-x:auto;margin-top:1.25rem;border:.5px solid var(--line);border-radius:16px}
+  table{border-collapse:collapse;width:100%;min-width:560px;font-size:.88rem;background:var(--card)}
+  th,td{text-align:left;padding:.8rem 1rem;vertical-align:top}
+  thead th{font-size:.74rem;font-weight:700;color:var(--ink);background:var(--panel);border-bottom:.5px solid var(--line)}
+  thead th .sub{display:block;font-family:var(--mono);font-size:.62rem;font-weight:500;color:var(--ink-3);letter-spacing:.03em;margin-top:.12rem}
+  tbody th{font-weight:600;color:var(--ink-2);white-space:nowrap;font-size:.8rem}
+  tbody td{color:var(--ink-2)}
+  tbody tr{border-top:.5px solid var(--line-soft)}
+  .yes{color:var(--green);font-weight:600}
+  .no-c{color:var(--red);font-weight:600}
+  .par{color:var(--orange);font-weight:600}
+
+  /* checklist */
+  .check{background:var(--card);border:.5px solid var(--line);border-radius:16px;overflow:hidden;margin-top:1.25rem}
+  .ck{display:flex;gap:.75rem;align-items:flex-start;padding:.9rem 1.1rem;border-top:.5px solid var(--line-soft);font-size:.92rem;color:var(--ink-2);line-height:1.55}
+  .ck:first-child{border-top:0}
+  .ck .box{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--accent);flex:0 0 auto;margin-top:.22rem;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:.62rem;font-weight:700}
+  .ck strong{color:var(--ink)}
+
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:.5px solid var(--line);font-size:.79rem;color:var(--ink-3);line-height:1.55}
+</style>
+
+<!-- 공유 화살표 마커: 문서에 한 번만. 모든 모식도의 marker-end="url(#ah)"가 이걸 재사용 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="ah" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto"><path d="M0,1 L8,4.5 L0,8 Z" fill="var(--ink-3)"/></marker>
+</defs></svg>
+
+<div class="desktop">
+  <div class="window">
+
+    <div class="titlebar">
+      <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+      <div class="tb-title">문서 제목 — 부제</div>
+    </div>
+
+    <div class="content">
+
+      <header>
+        <p class="eyebrow">EYEBROW · 분류/맥락</p>
+        <h1>가이드 문서 제목</h1>
+        <p class="lede">한두 문장으로 이 문서가 무엇을 설명하는지. 핵심 전제를 <strong>굵게</strong>.</p>
+      </header>
+
+      <!-- ===== 섹션 예시: 번호 칩 + 키커 + 모식도 ===== -->
+      <section>
+        <div class="sec-head"><span class="sec-num">1</span><p class="kicker">First Principle</p></div>
+        <h2>섹션 제목</h2>
+        <p>설명 문단. 핵심 용어는 <span class="hl">강조색</span>으로.</p>
+
+        <figure>
+          <p class="scroll-hint">← 좌우 스크롤</p>
+          <div class="fig-scroll">
+            <svg class="dg" viewBox="0 0 700 160" role="img" aria-label="흐름 모식도 예시">
+              <rect x="24" y="56" width="120" height="48" rx="12" class="nd"/>
+              <text x="84" y="84" class="ttl" text-anchor="middle">입력</text>
+              <line x1="148" y1="80" x2="196" y2="80" class="ar"/>
+              <rect x="200" y="56" width="120" height="48" rx="12" class="nd-a"/>
+              <text x="260" y="78" class="ttl" fill="var(--accent-ink)" text-anchor="middle">처리</text>
+              <text x="260" y="94" class="cap" text-anchor="middle">핵심 단계</text>
+              <line x1="324" y1="80" x2="372" y2="80" class="ar"/>
+              <rect x="376" y="56" width="140" height="48" rx="12" fill="var(--green-soft)" stroke="none"/>
+              <text x="446" y="84" class="ttl" fill="var(--green)" text-anchor="middle">✓ 결과</text>
+            </svg>
+          </div>
+          <figcaption>그림 아래 한 줄 설명. 그림이 말하려는 <strong>결론</strong>을 적는다.</figcaption>
+        </figure>
+
+        <div class="note info">
+          <span class="lbl">용어 정리</span>
+          <p><strong>A</strong> = 설명. <strong>B</strong> = 설명.</p>
+        </div>
+      </section>
+
+      <footer>
+        출처/기준/전제 각주.
+      </footer>
+
+    </div>
+  </div>
+</div>
