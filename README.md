@@ -13,11 +13,22 @@
 동기화 구조와 절차를 **모식도**로 정리한 macOS 스타일 가이드가 있습니다. 아래 내용과
 동일하지만 훨씬 읽기 좋습니다.
 
-- **브라우저에서 바로 보기** → [htmlpreview로 열기](https://htmlpreview.github.io/?https://github.com/allenst486db/TY_claude_skills/blob/main/docs/guide.html)
+- **바로 보기 (GitHub Pages)** → **https://allenst486db.github.io/TY_claude_skills/**
 - **소스** → [`docs/guide.html`](./docs/guide.html) (내려받아 브라우저로 열어도 됩니다)
 
 > GitHub의 README는 마크다운만 렌더링해 CSS·SVG가 제거되므로, 스타일이 적용된 가이드는
-> 위 HTML 문서로 제공합니다. 아래 마크다운 절차만 따라도 동일하게 세팅됩니다.
+> HTML 문서로 제공하고 GitHub Pages로 호스팅합니다. 아래 마크다운 절차만 따라도 동일하게
+> 세팅됩니다.
+
+<details>
+<summary>GitHub Pages 최초 1회 켜는 방법</summary>
+
+1. 리포 → **Settings** → 좌측 **Pages**
+2. **Build and deployment** → **Source** = `Deploy from a branch`
+3. **Branch** = `main`, 폴더 = `/ (root)` → **Save**
+4. 1~2분 뒤 위 Pages 주소가 활성화됩니다. (루트 주소는 가이드로 자동 이동)
+
+</details>
 
 ## 수록 스킬
 
