@@ -1,0 +1,356 @@
+<title>TY_claude_skills — 스킬 동기화 가이드</title>
+<style>
+  :root{
+    --desk-1:#DCE3F0;--desk-2:#C7D2E8;--desk-3:#E7ECF6;
+    --win-solid:#FFFFFF;--bar:rgba(246,246,248,.8);
+    --panel:#F5F5F7;--card:#FFFFFF;
+    --ink:#1D1D1F;--ink-2:#55555A;--ink-3:#86868B;
+    --line:#E3E3E6;--line-soft:#EEEEF0;
+    --accent:#007AFF;--accent-ink:#0060DF;--accent-soft:#E7F0FF;
+    --green:#1EA64A;--green-soft:#E4F6EA;
+    --orange:#C77700;--orange-soft:#FBEEDA;
+    --red:#E0352B;--red-soft:#FCE9E8;
+    --purple:#8E44D0;--cyan:#0AA2C0;--pink:#E0356B;
+    --tl-r:#FF5F57;--tl-y:#FEBC2E;--tl-g:#28C840;
+    --shadow:0 40px 80px -20px rgba(20,30,60,.35),0 12px 32px -8px rgba(20,30,60,.22);
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,"SF Mono","Menlo","Consolas",monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --desk-1:#101318;--desk-2:#05070B;--desk-3:#1A1F27;
+      --win-solid:#1C1C1E;--bar:rgba(40,40,43,.72);
+      --panel:#2C2C2E;--card:#2C2C2E;
+      --ink:#F5F5F7;--ink-2:#B0B0B6;--ink-3:#8A8A8F;
+      --line:#3A3A3C;--line-soft:#323234;
+      --accent:#0A84FF;--accent-ink:#5AB0FF;--accent-soft:#14304F;
+      --green:#30D158;--green-soft:#12331F;
+      --orange:#FF9F0A;--orange-soft:#3A2A10;
+      --red:#FF453A;--red-soft:#3A1A18;
+      --purple:#BF5AF2;--cyan:#5AC8FA;--pink:#FF375F;
+      --shadow:0 40px 90px -20px rgba(0,0,0,.7),0 12px 32px -8px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"]{--desk-1:#DCE3F0;--desk-2:#C7D2E8;--desk-3:#E7ECF6;--win-solid:#FFFFFF;--bar:rgba(246,246,248,.8);--panel:#F5F5F7;--card:#FFFFFF;--ink:#1D1D1F;--ink-2:#55555A;--ink-3:#86868B;--line:#E3E3E6;--line-soft:#EEEEF0;--accent:#007AFF;--accent-ink:#0060DF;--accent-soft:#E7F0FF;--green:#1EA64A;--green-soft:#E4F6EA;--orange:#C77700;--orange-soft:#FBEEDA;--red:#E0352B;--red-soft:#FCE9E8;--purple:#8E44D0;--cyan:#0AA2C0;--pink:#E0356B;--shadow:0 40px 80px -20px rgba(20,30,60,.35),0 12px 32px -8px rgba(20,30,60,.22);}
+  :root[data-theme="dark"]{--desk-1:#101318;--desk-2:#05070B;--desk-3:#1A1F27;--win-solid:#1C1C1E;--bar:rgba(40,40,43,.72);--panel:#2C2C2E;--card:#2C2C2E;--ink:#F5F5F7;--ink-2:#B0B0B6;--ink-3:#8A8A8F;--line:#3A3A3C;--line-soft:#323234;--accent:#0A84FF;--accent-ink:#5AB0FF;--accent-soft:#14304F;--green:#30D158;--green-soft:#12331F;--orange:#FF9F0A;--orange-soft:#3A2A10;--red:#FF453A;--red-soft:#3A1A18;--purple:#BF5AF2;--cyan:#5AC8FA;--pink:#FF375F;--shadow:0 40px 90px -20px rgba(0,0,0,.7),0 12px 32px -8px rgba(0,0,0,.5);}
+
+  *{box-sizing:border-box}
+  body{margin:0}
+  .desktop{min-height:100vh;background:radial-gradient(1200px 700px at 12% -10%,var(--desk-3),transparent 60%),linear-gradient(150deg,var(--desk-1),var(--desk-2));padding:clamp(.75rem,3.5vw,3rem) clamp(.5rem,3vw,2.5rem);font-family:var(--sans);-webkit-font-smoothing:antialiased;display:flex;justify-content:center}
+  .window{width:100%;max-width:900px;background:var(--win-solid);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;border:.5px solid rgba(255,255,255,.16);animation:winIn .5s cubic-bezier(.2,.8,.2,1) both}
+  @keyframes winIn{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.window{animation:none}}
+  .titlebar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:.75rem;padding:.8rem 1.1rem;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line)}
+  .traffic{display:flex;gap:8px}
+  .traffic i{width:12px;height:12px;border-radius:50%;display:block}
+  .traffic .r{background:var(--tl-r)}.traffic .y{background:var(--tl-y)}.traffic .g{background:var(--tl-g)}
+  .tb-title{flex:1;text-align:center;font-size:.8rem;font-weight:600;color:var(--ink-2);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:52px}
+  .content{padding:clamp(1.5rem,4vw,3rem) clamp(1rem,4.5vw,3.25rem) 3.5rem;color:var(--ink);font-size:16.5px;line-height:1.72;letter-spacing:-.003em}
+  .content>*{max-width:46rem;margin-left:auto;margin-right:auto}
+
+  .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 .9rem}
+  h1{font-size:clamp(1.85rem,4.6vw,2.7rem);font-weight:700;line-height:1.12;letter-spacing:-.028em;text-wrap:balance;margin:0 0 1rem}
+  .lede{font-size:1.08rem;color:var(--ink-2);margin:0;text-wrap:pretty}
+  section{margin-top:3.5rem}
+  .sec-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.55rem}
+  .sec-num{font-family:var(--mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--accent);width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .kicker{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0}
+  h2{font-size:clamp(1.3rem,2.9vw,1.65rem);font-weight:700;line-height:1.25;letter-spacing:-.02em;text-wrap:balance;margin:0 0 1rem}
+  h3{font-size:1.1rem;font-weight:700;letter-spacing:-.015em;margin:0}
+  p{margin:0 0 1.05rem}p:last-child{margin-bottom:0}
+  strong{font-weight:600}
+  .hl{color:var(--accent-ink);font-weight:600}
+  code{font-family:var(--mono);font-size:.84em;background:var(--panel);padding:.12em .42em;border-radius:5px;color:var(--accent-ink)}
+
+  .note{border-radius:14px;padding:1.05rem 1.3rem;margin:1.25rem 0;font-size:.95rem;line-height:1.62}
+  .note .lbl{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;font-weight:600}
+  .note p{margin:0 0 .55rem}.note p:last-child{margin:0}
+  .note.info{background:var(--accent-soft);color:var(--ink-2)}.note.info .lbl{color:var(--accent-ink)}.note.info strong{color:var(--accent-ink)}
+  .note.warn{background:var(--orange-soft);color:var(--ink-2)}.note.warn .lbl{color:var(--orange)}.note.warn strong{color:var(--orange)}
+  .note.danger{background:var(--red-soft);color:var(--ink-2)}.note.danger .lbl{color:var(--red)}.note.danger strong{color:var(--red)}
+  .note.ok{background:var(--green-soft);color:var(--ink-2)}.note.ok .lbl{color:var(--green)}.note.ok strong{color:var(--green)}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin:1.25rem 0}
+  .cd{background:var(--panel);border-radius:13px;padding:.9rem 1.05rem}
+  .cd .t{font-size:.86rem;font-weight:700;margin-bottom:.2rem;letter-spacing:-.01em}
+  .cd .d{font-size:.8rem;color:var(--ink-3);line-height:1.5}
+
+  figure{margin:1.5rem 0;padding:1.25rem;background:var(--card);border:.5px solid var(--line);border-radius:16px}
+  .fig-scroll{overflow-x:auto}
+  .fig-scroll svg{display:block;width:100%;min-width:640px;height:auto}
+  .dg text{font-family:var(--sans)}
+  .dg .ttl{font-size:12.5px;font-weight:700;fill:var(--ink)}
+  .dg .lbl{font-size:11px;font-weight:600;fill:var(--ink-2)}
+  .dg .cap{font-size:9.5px;fill:var(--ink-3)}
+  .dg .nd{fill:var(--panel);stroke:var(--line)}
+  .dg .nd-a{fill:var(--card);stroke:var(--accent);stroke-width:1.5}
+  .dg .ar{stroke:var(--ink-3);stroke-width:1.5;fill:none;marker-end:url(#ah)}
+  .dg .ar-d{stroke:var(--ink-3);stroke-width:1.4;fill:none;stroke-dasharray:4 4;marker-end:url(#ah)}
+  figcaption{margin-top:.9rem;font-size:.83rem;color:var(--ink-3);text-align:center;line-height:1.5}
+  .scroll-hint{display:none;font-size:.72rem;color:var(--ink-3);text-align:right;margin-bottom:.4rem;font-family:var(--mono)}
+  @media (max-width:680px){.scroll-hint{display:block}}
+
+  .method{background:var(--card);border:.5px solid var(--line);border-radius:16px;padding:1.5rem 1.5rem;margin:1.1rem 0}
+  .m-head{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:.45rem}
+  .m-badge{font-family:var(--mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--accent);padding:.2rem .55rem;border-radius:7px}
+  .m-badge.alt{background:var(--ink-3)}
+  .m-pill{font-size:.7rem;font-weight:600;padding:.18rem .58rem;border-radius:999px}
+  .m-pill.ok{background:var(--green-soft);color:var(--green)}
+  .m-pill.warn{background:var(--orange-soft);color:var(--orange)}
+  .m-desc{color:var(--ink-2);margin:.4rem 0 1.1rem;font-size:.96rem}
+
+  .sub-h{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:1.35rem 0 .6rem;font-weight:600}
+
+  /* terminal-style code block */
+  pre.term{background:var(--panel);border:.5px solid var(--line);border-radius:12px;padding:1rem 1.1rem;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.75;color:var(--ink);margin:1rem 0;white-space:pre}
+  pre.term .c{color:var(--ink-3)}
+  pre.term .k{color:var(--accent-ink);font-weight:600}
+
+  .table-wrap{overflow-x:auto;margin-top:1.25rem;border:.5px solid var(--line);border-radius:16px}
+  table{border-collapse:collapse;width:100%;min-width:480px;font-size:.9rem;background:var(--card)}
+  th,td{text-align:left;padding:.8rem 1rem;vertical-align:top}
+  thead th{font-size:.74rem;font-weight:700;color:var(--ink);background:var(--panel);border-bottom:.5px solid var(--line)}
+  tbody th{font-weight:600;color:var(--ink-2);white-space:nowrap;font-size:.82rem;font-family:var(--mono)}
+  tbody td{color:var(--ink-2)}
+  tbody tr{border-top:.5px solid var(--line-soft)}
+
+  .check{background:var(--card);border:.5px solid var(--line);border-radius:16px;overflow:hidden;margin-top:1.25rem}
+  .ck{display:flex;gap:.75rem;align-items:flex-start;padding:.9rem 1.1rem;border-top:.5px solid var(--line-soft);font-size:.92rem;color:var(--ink-2);line-height:1.55}
+  .ck:first-child{border-top:0}
+  .ck .box{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--accent);flex:0 0 auto;margin-top:.22rem;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:.62rem;font-weight:700}
+  .ck strong{color:var(--ink)}
+
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:.5px solid var(--line);font-size:.79rem;color:var(--ink-3);line-height:1.55}
+  footer a{color:var(--accent-ink);text-decoration:none}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="ah" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto"><path d="M0,1 L8,4.5 L0,8 Z" fill="var(--ink-3)"/></marker>
+</defs></svg>
+
+<div class="desktop">
+  <div class="window">
+
+    <div class="titlebar">
+      <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+      <div class="tb-title">TY_claude_skills — 스킬 동기화 가이드</div>
+    </div>
+
+    <div class="content">
+
+      <header>
+        <p class="eyebrow">Claude Code · Skills Sync Guide</p>
+        <h1>여러 PC에서 스킬을 하나의 리포로 관리하기</h1>
+        <p class="lede">각 PC의 <code>~/.claude/skills</code> 디렉토리를 <strong>이 리포의 작업본(clone)</strong>으로 맞추면, 어디서든 <span class="hl">pull로 받고 push로 올리며</span> 동일한 스킬을 씁니다.</p>
+      </header>
+
+      <!-- 1. 개념 -->
+      <section>
+        <div class="sec-head"><span class="sec-num">1</span><p class="kicker">Concept</p></div>
+        <h2>동기화 구조 한눈에 보기</h2>
+        <p>중앙의 GitHub 리포가 <strong>단일 원본</strong>이고, 각 PC는 그 사본입니다. 스킬을 고치면 push로 원본에 반영하고, 다른 PC는 pull로 따라옵니다.</p>
+
+        <figure>
+          <p class="scroll-hint">← 좌우 스크롤</p>
+          <div class="fig-scroll">
+          <svg class="dg" viewBox="0 0 700 250" role="img" aria-label="여러 PC와 중앙 GitHub 리포의 push/pull 동기화 구조">
+            <!-- PCs -->
+            <rect x="24" y="24" width="180" height="52" rx="12" class="nd"/>
+            <text x="44" y="48" class="ttl">💻 PC 1</text>
+            <text x="44" y="65" class="cap">~/.claude/skills</text>
+            <rect x="24" y="99" width="180" height="52" rx="12" class="nd"/>
+            <text x="44" y="123" class="ttl">💻 PC 2</text>
+            <text x="44" y="140" class="cap">~/.claude/skills</text>
+            <rect x="24" y="174" width="180" height="52" rx="12" class="nd"/>
+            <text x="44" y="198" class="ttl">💻 PC 3</text>
+            <text x="44" y="215" class="cap">~/.claude/skills</text>
+
+            <!-- Repo (center-right) -->
+            <rect x="470" y="80" width="204" height="90" rx="16" fill="var(--accent)" stroke="none"/>
+            <text x="572" y="118" class="ttl" fill="#fff" text-anchor="middle" font-size="14">GitHub</text>
+            <text x="572" y="138" fill="rgba(255,255,255,.9)" text-anchor="middle" font-size="10.5" font-weight="600">TY_claude_skills</text>
+            <text x="572" y="154" fill="rgba(255,255,255,.75)" text-anchor="middle" font-size="9">단일 원본 (origin/main)</text>
+
+            <!-- push arrows PC->repo -->
+            <line x1="206" y1="46"  x2="468" y2="104" class="ar"/>
+            <line x1="206" y1="125" x2="468" y2="125" class="ar"/>
+            <line x1="206" y1="204" x2="468" y2="146" class="ar"/>
+
+            <!-- pull dashed back -->
+            <path d="M470,150 C 360,220 300,150 208,72" class="ar-d"/>
+
+            <!-- legend -->
+            <rect x="300" y="196" width="112" height="22" rx="7" fill="var(--accent-soft)" stroke="none"/>
+            <text x="356" y="211" fill="var(--accent-ink)" text-anchor="middle" font-size="10" font-weight="700">→ git push</text>
+            <rect x="300" y="222" width="112" height="0" />
+            <text x="356" y="236" class="cap" text-anchor="middle">⤺ 점선 = git pull</text>
+          </svg>
+          </div>
+          <figcaption><strong>push</strong>는 내 변경을 원본에 올리고, <strong>pull</strong>은 원본의 최신 상태를 내 PC로 가져옵니다. 모든 PC가 같은 원본을 바라봅니다.</figcaption>
+        </figure>
+      </section>
+
+      <!-- 2. 설치 -->
+      <section>
+        <div class="sec-head"><span class="sec-num">2</span><p class="kicker">Setup</p></div>
+        <h2>새 PC에서 처음 설치</h2>
+        <div class="cards">
+          <div class="cd"><div class="t">경우 A</div><div class="d"><code>~/.claude/skills</code> 가 없거나 비어 있음 → 바로 clone</div></div>
+          <div class="cd"><div class="t">경우 B</div><div class="d">그 PC에 이미 로컬 스킬이 있음 → 3번 편입 절차</div></div>
+        </div>
+
+        <div class="method">
+          <div class="m-head"><span class="m-badge">경우 A</span><h3>비어 있는 경우 — clone</h3><span class="m-pill ok">가장 간단</span></div>
+          <p class="m-desc">리포를 스킬 디렉토리 위치로 그대로 내려받습니다.</p>
+<pre class="term"><span class="c"># macOS / Linux</span>
+<span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git ~/.claude/skills
+
+<span class="c"># Windows (PowerShell)</span>
+<span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git "$env:USERPROFILE\.claude\skills"</pre>
+        </div>
+
+        <div class="note info">
+          <span class="lbl">설치 후</span>
+          <p>Claude Code를 <strong>새 세션으로 시작</strong>해야 스킬이 로드됩니다.</p>
+        </div>
+      </section>
+
+      <!-- 3. 편입 -->
+      <section>
+        <div class="sec-head"><span class="sec-num">3</span><p class="kicker">Contribute</p></div>
+        <h2>다른 PC의 기존 스킬을 리포에 편입</h2>
+        <p>이미 로컬 스킬이 있는 PC를 리포와 합칩니다. 서로 <strong>다른 이름의 스킬 폴더는 충돌 없이</strong> 그대로 합쳐집니다.</p>
+
+        <figure>
+          <p class="scroll-hint">← 좌우 스크롤</p>
+          <div class="fig-scroll">
+          <svg class="dg" viewBox="0 0 700 210" role="img" aria-label="로컬 스킬을 리포에 병합해 올리는 흐름">
+            <rect x="16" y="88" width="104" height="54" rx="12" class="nd"/>
+            <text x="68" y="110" class="ttl" text-anchor="middle">로컬 스킬</text>
+            <text x="68" y="126" class="cap" text-anchor="middle">이 PC</text>
+            <line x1="120" y1="115" x2="152" y2="115" class="ar"/>
+
+            <rect x="156" y="88" width="120" height="54" rx="12" class="nd-a"/>
+            <text x="216" y="110" class="ttl" fill="var(--accent-ink)" text-anchor="middle">init + commit</text>
+            <text x="216" y="126" class="cap" text-anchor="middle">로컬 먼저 저장</text>
+            <line x1="276" y1="115" x2="308" y2="115" class="ar"/>
+
+            <!-- remote feeding merge -->
+            <rect x="300" y="14" width="132" height="40" rx="11" class="nd" stroke-dasharray="5 4"/>
+            <text x="366" y="32" class="lbl" text-anchor="middle">origin (GitHub)</text>
+            <text x="366" y="47" class="cap" text-anchor="middle">리포의 스킬</text>
+            <path d="M366,54 L366,86" class="ar"/>
+            <text x="378" y="74" class="cap">fetch</text>
+
+            <rect x="312" y="88" width="128" height="54" rx="12" class="nd-a"/>
+            <text x="376" y="108" class="ttl" fill="var(--accent-ink)" text-anchor="middle">merge</text>
+            <text x="376" y="123" class="cap" text-anchor="middle">--allow-unrelated-histories</text>
+            <line x1="440" y1="115" x2="472" y2="115" class="ar"/>
+
+            <rect x="476" y="88" width="80" height="54" rx="12" class="nd"/>
+            <text x="516" y="119" class="ttl" text-anchor="middle">push</text>
+            <line x1="556" y1="115" x2="588" y2="115" class="ar"/>
+
+            <rect x="592" y="80" width="96" height="70" rx="13" fill="var(--green-soft)" stroke="none"/>
+            <text x="640" y="110" class="ttl" fill="var(--green)" text-anchor="middle">✓ 통합</text>
+            <text x="640" y="127" class="cap" text-anchor="middle">로컬+리포</text>
+          </svg>
+          </div>
+          <figcaption>로컬 스킬을 먼저 커밋한 뒤, 리포를 <code>fetch</code>해 <code>merge</code>로 합치고 <code>push</code>합니다. 이후 이 PC도 리포의 작업본이 됩니다.</figcaption>
+        </figure>
+
+<pre class="term"><span class="c"># 스킬 디렉토리로 이동  (Windows: cd "$env:USERPROFILE\.claude\skills")</span>
+cd ~/.claude/skills
+
+<span class="c"># 1) git 저장소로 초기화하고 로컬 스킬을 먼저 커밋</span>
+<span class="k">git init</span> -b main
+<span class="k">git add</span> -A
+<span class="k">git commit</span> -m "local skills from &lt;이-PC-이름&gt;"
+
+<span class="c"># 2) 원격 연결 후 내려받아 병합 (서로 다른 뿌리이므로 옵션 필요)</span>
+<span class="k">git remote add</span> origin https://github.com/allenst486db/TY_claude_skills.git
+<span class="k">git fetch</span> origin
+<span class="k">git merge</span> origin/main --allow-unrelated-histories -m "merge TY_claude_skills"
+
+<span class="c"># 3) 합쳐진 결과를 올림</span>
+<span class="k">git push</span> -u origin main</pre>
+
+        <div class="note warn">
+          <span class="lbl">충돌이 나는 경우</span>
+          <p>두 PC가 <strong>같은 이름</strong>의 스킬을 서로 다른 내용으로 가지고 있으면 <code>merge</code>가 해당 파일에서 충돌을 표시합니다. 파일을 열어 남길 내용을 정리한 뒤 <code>git add &lt;파일&gt;</code> → <code>git commit</code> → <code>git push</code>로 마무리합니다.</p>
+        </div>
+
+        <p class="sub-h">대안 — 병합이 번거로울 때</p>
+        <p>리포를 임시 폴더에 clone → 올릴 스킬 폴더만 복사 → commit/push 해도 됩니다. 단, 이 방식은 그 PC의 <code>~/.claude/skills</code>를 리포 작업본으로 만들지는 않습니다.</p>
+<pre class="term"><span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git /tmp/ty_skills
+cp -r ~/.claude/skills/&lt;올릴-스킬&gt; /tmp/ty_skills/
+cd /tmp/ty_skills &amp;&amp; <span class="k">git add</span> -A &amp;&amp; <span class="k">git commit</span> -m "add &lt;올릴-스킬&gt;" &amp;&amp; <span class="k">git push</span></pre>
+      </section>
+
+      <!-- 4. 평상시 관리 -->
+      <section>
+        <div class="sec-head"><span class="sec-num">4</span><p class="kicker">Daily</p></div>
+        <h2>평상시 관리 루프</h2>
+        <p><strong>작업 시작 전 <code>pull</code>, 끝나고 <code>push</code></strong>를 습관화하면 PC 간 충돌이 거의 없습니다.</p>
+
+        <figure>
+          <div class="fig-scroll">
+          <svg class="dg" viewBox="0 0 700 190" role="img" aria-label="pull → 작업 → commit → push 반복 루프">
+            <rect x="24" y="34" width="120" height="52" rx="12" fill="var(--accent-soft)" stroke="none"/>
+            <text x="84" y="58" class="ttl" fill="var(--accent-ink)" text-anchor="middle">git pull</text>
+            <text x="84" y="74" class="cap" text-anchor="middle">최신 받기</text>
+            <line x1="144" y1="60" x2="180" y2="60" class="ar"/>
+            <rect x="184" y="34" width="150" height="52" rx="12" class="nd"/>
+            <text x="259" y="58" class="ttl" text-anchor="middle">작업</text>
+            <text x="259" y="74" class="cap" text-anchor="middle">수정 / 새 스킬 추가</text>
+            <line x1="334" y1="60" x2="370" y2="60" class="ar"/>
+            <rect x="374" y="34" width="120" height="52" rx="12" class="nd"/>
+            <text x="434" y="64" class="ttl" text-anchor="middle">git commit</text>
+            <line x1="494" y1="60" x2="530" y2="60" class="ar"/>
+            <rect x="534" y="34" width="120" height="52" rx="12" fill="var(--green-soft)" stroke="none"/>
+            <text x="594" y="64" class="ttl" fill="var(--green)" text-anchor="middle">git push</text>
+
+            <!-- loop back -->
+            <path d="M594,86 L594,150 L84,150 L84,90" class="ar-d"/>
+            <text x="339" y="167" class="cap" text-anchor="middle">다음 작업 시 반복</text>
+          </svg>
+          </div>
+          <figcaption>이 순환만 지키면 여러 PC가 항상 같은 상태를 유지합니다.</figcaption>
+        </figure>
+
+<pre class="term">cd ~/.claude/skills
+
+<span class="k">git pull</span>                    <span class="c"># 다른 PC에서 올린 최신 스킬 받기</span>
+<span class="c"># … 스킬 수정 또는 새로 만든 뒤 …</span>
+<span class="k">git add</span> -A
+<span class="k">git commit</span> -m "update: &lt;내용&gt;"
+<span class="k">git push</span></pre>
+      </section>
+
+      <!-- 5. 수록 스킬 & 새 스킬 -->
+      <section>
+        <div class="sec-head"><span class="sec-num">5</span><p class="kicker">Catalog</p></div>
+        <h2>수록 스킬 &amp; 새 스킬 추가</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>스킬</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><th>mosikdo-guide</th><td>macOS 스타일 HTML 가이드 문서 + 인라인 SVG 모식도 디자인 시스템</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin-top:1.25rem">새 스킬은 <code>~/.claude/skills/&lt;skill-name&gt;/SKILL.md</code> 구조로 폴더를 만들고 커밋·push 하면 됩니다.</p>
+        <div class="check">
+          <div class="ck"><span class="box">✓</span><div><strong>폴더명 = 스킬명</strong> — <code>SKILL.md</code>의 <code>name</code>과 폴더 이름을 같게 맞춥니다.</div></div>
+          <div class="ck"><span class="box">✓</span><div><strong>description에 "언제 쓰는지"</strong> — 발동 조건을 구체적으로 적어야 스킬이 잘 트리거됩니다.</div></div>
+          <div class="ck"><span class="box">✓</span><div><strong>push 전 pull</strong> — 올리기 전 최신 상태를 받아 충돌을 예방합니다.</div></div>
+        </div>
+      </section>
+
+      <footer>
+        리포: <a href="https://github.com/allenst486db/TY_claude_skills">github.com/allenst486db/TY_claude_skills</a> · 이 문서는 <code>mosikdo-guide</code> 스킬의 디자인 시스템으로 작성되었습니다.
+      </footer>
+
+    </div>
+  </div>
+</div>

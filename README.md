@@ -8,6 +8,17 @@
 > 되도록 맞춥니다. 그러면 어느 PC에서든 `git pull`로 최신 스킬을 받고,
 > 수정·추가 후 `git push`로 올릴 수 있습니다.
 
+## 📘 시각 가이드 (권장)
+
+동기화 구조와 절차를 **모식도**로 정리한 macOS 스타일 가이드가 있습니다. 아래 내용과
+동일하지만 훨씬 읽기 좋습니다.
+
+- **브라우저에서 바로 보기** → [htmlpreview로 열기](https://htmlpreview.github.io/?https://github.com/allenst486db/TY_claude_skills/blob/main/docs/guide.html)
+- **소스** → [`docs/guide.html`](./docs/guide.html) (내려받아 브라우저로 열어도 됩니다)
+
+> GitHub의 README는 마크다운만 렌더링해 CSS·SVG가 제거되므로, 스타일이 적용된 가이드는
+> 위 HTML 문서로 제공합니다. 아래 마크다운 절차만 따라도 동일하게 세팅됩니다.
+
 ## 수록 스킬
 
 | 스킬 | 설명 |
