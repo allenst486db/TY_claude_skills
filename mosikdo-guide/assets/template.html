@@ -48,6 +48,12 @@
   :root[data-theme="light"]{--desk-1:#DCE3F0;--desk-2:#C7D2E8;--desk-3:#E7ECF6;--win-solid:#FFFFFF;--bar:rgba(246,246,248,.8);--panel:#F5F5F7;--card:#FFFFFF;--ink:#1D1D1F;--ink-2:#55555A;--ink-3:#86868B;--line:#E3E3E6;--line-soft:#EEEEF0;--accent:#007AFF;--accent-ink:#0060DF;--accent-soft:#E7F0FF;--green:#1EA64A;--green-soft:#E4F6EA;--orange:#C77700;--orange-soft:#FBEEDA;--red:#E0352B;--red-soft:#FCE9E8;--purple:#8E44D0;--cyan:#0AA2C0;--pink:#E0356B;--shadow:0 40px 80px -20px rgba(20,30,60,.35),0 12px 32px -8px rgba(20,30,60,.22);}
   :root[data-theme="dark"]{--desk-1:#101318;--desk-2:#05070B;--desk-3:#1A1F27;--win-solid:#1C1C1E;--bar:rgba(40,40,43,.72);--panel:#2C2C2E;--card:#2C2C2E;--ink:#F5F5F7;--ink-2:#B0B0B6;--ink-3:#8A8A8F;--line:#3A3A3C;--line-soft:#323234;--accent:#0A84FF;--accent-ink:#5AB0FF;--accent-soft:#14304F;--green:#30D158;--green-soft:#12331F;--orange:#FF9F0A;--orange-soft:#3A2A10;--red:#FF453A;--red-soft:#3A1A18;--purple:#BF5AF2;--cyan:#5AC8FA;--pink:#FF375F;--shadow:0 40px 90px -20px rgba(0,0,0,.7),0 12px 32px -8px rgba(0,0,0,.5);}
 
+  /* terminal tokens — 라이트/다크 각각 실제 터미널 룩으로 반응 (.termwin 에서 사용) */
+  :root{--term-bg:#FBFBFD;--term-head:#EDEDF0;--term-ink:#1D1D1F;--term-cmt:#8A8F98;--term-kw:#0060DF;--term-pr:#1EA64A}
+  @media (prefers-color-scheme:dark){:root{--term-bg:#161618;--term-head:#242427;--term-ink:#E9E9EC;--term-cmt:#8A8F98;--term-kw:#6AB7FF;--term-pr:#30D158}}
+  :root[data-theme="light"]{--term-bg:#FBFBFD;--term-head:#EDEDF0;--term-ink:#1D1D1F;--term-cmt:#8A8F98;--term-kw:#0060DF;--term-pr:#1EA64A}
+  :root[data-theme="dark"]{--term-bg:#161618;--term-head:#242427;--term-ink:#E9E9EC;--term-cmt:#8A8F98;--term-kw:#6AB7FF;--term-pr:#30D158}
+
   *{box-sizing:border-box}
   body{margin:0}
   .desktop{
@@ -102,14 +108,14 @@
   code{font-family:var(--mono);font-size:.84em;background:var(--panel);padding:.12em .42em;border-radius:5px;color:var(--accent-ink)}
 
   /* macOS terminal-window code block (여러 줄 명령/코드). 마크업: references/components.md 참고 */
-  .termwin{margin:1rem 0;border:.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);box-shadow:0 1px 2px rgba(20,30,60,.04)}
-  .termbar{position:relative;display:flex;align-items:center;padding:.5rem .8rem;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid var(--line)}
+  .termwin{margin:1rem 0;border:.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--term-bg);box-shadow:0 1px 2px rgba(20,30,60,.06)}
+  .termbar{position:relative;display:flex;align-items:center;padding:.5rem .8rem;background:var(--term-head);border-bottom:.5px solid var(--line)}
   .termbar .dots{width:11px;height:11px;border-radius:50%;background:var(--tl-r);box-shadow:16px 0 0 var(--tl-y),32px 0 0 var(--tl-g)}
-  .termbar .tt{position:absolute;left:0;right:0;text-align:center;font-family:var(--mono);font-size:.68rem;font-weight:600;color:var(--ink-3);letter-spacing:.02em;pointer-events:none}
-  pre.term{margin:0;background:transparent;border:0;border-radius:0;padding:1rem 1.1rem;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.75;color:var(--ink);white-space:pre}
-  pre.term .c{color:var(--ink-3)}   /* 주석 */
-  pre.term .k{color:var(--accent-ink);font-weight:600}  /* 명령/키워드 */
-  pre.term .p{color:var(--green)}   /* 프롬프트/강조 */
+  .termbar .tt{position:absolute;left:0;right:0;text-align:center;font-family:var(--mono);font-size:.68rem;font-weight:600;color:var(--term-cmt);letter-spacing:.02em;pointer-events:none}
+  pre.term{margin:0;background:transparent;border:0;border-radius:0;padding:1rem 1.1rem;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.75;color:var(--term-ink);white-space:pre}
+  pre.term .c{color:var(--term-cmt)}   /* 주석 */
+  pre.term .k{color:var(--term-kw);font-weight:600}  /* 명령/키워드 */
+  pre.term .p{color:var(--term-pr)}   /* 프롬프트/강조 */
 
   /* callouts: info / warn / danger / ok / plain */
   .note{border-radius:14px;padding:1.05rem 1.3rem;margin:1.25rem 0;font-size:.95rem;line-height:1.62}
