@@ -1,0 +1,75 @@
+{
+  "$comment": "이 저장소에서 사용하는 Claude Code 스킬/플러그인/MCP 스택 명세. scripts/install-claude-skills.* 가 이 목록을 그대로 재현합니다. skills-lock.json(스킬 CLI 전용 락파일)과는 별개 파일이며 서로 덮어쓰지 않습니다.",
+  "version": 1,
+  "updatedAt": "2026-07-25",
+  "plugins": [
+    {
+      "name": "ui-ux-pro-max",
+      "marketplace": "ui-ux-pro-max-skill",
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "installedVersion": "2.11.0",
+      "purpose": "UI/UX 디자인, 디자인 시스템, 배너, 슬라이드 생성",
+      "note": "이번 작업 이전부터 설치되어 있던 항목. 재설치하지 않음."
+    },
+    {
+      "name": "andrej-karpathy-skills",
+      "marketplace": "karpathy-skills",
+      "repo": "forrestchang/andrej-karpathy-skills",
+      "installedVersion": "1.0.0",
+      "provides": ["karpathy-guidelines"],
+      "purpose": "LLM 코딩 실수를 줄이는 4대 원칙(가정 명시, 단순함 우선, 외과적 수정, 검증 가능한 목표)"
+    },
+    {
+      "name": "caveman",
+      "marketplace": "caveman",
+      "repo": "JuliusBrussee/caveman",
+      "installedVersion": "0d95a81d35a9",
+      "provides": ["caveman", "caveman-commit", "caveman-review", "caveman-stats", "caveman-compress", "caveman-help", "cavecrew"],
+      "purpose": "출력 토큰 압축 모드(최대 65% 절감)",
+      "config": {
+        "path": "%APPDATA%/caveman/config.json",
+        "defaultMode": "off",
+        "note": "자동 활성화를 끈 상태. 필요할 때 /caveman 으로 진입."
+      }
+    },
+    {
+      "name": "handoff",
+      "marketplace": "handoff",
+      "repo": "thepushkarp/handoff",
+      "installedVersion": "0.2.0",
+      "provides": ["/handoff:create", "/handoff:resume"],
+      "purpose": "세션 간 컨텍스트 인수인계(docs/handoff/HANDOFF.md), 컨텍스트 압축 대비 훅 포함"
+    }
+  ],
+  "skills": [
+    {
+      "name": "deep-research",
+      "repo": "199-biotechnologies/claude-deep-research-skill",
+      "installMethod": "git clone",
+      "installPath": "~/.claude/skills/deep-research",
+      "purpose": "다중 소스 인용 추적 리서치 파이프라인(quick/standard/deep/ultradeep 4모드)",
+      "optionalDeps": ["search-cli (다중 검색 제공자 집계)", "weasyprint (PDF 출력)"]
+    }
+  ],
+  "mcpServers": [
+    {
+      "name": "ruflo",
+      "scope": "user",
+      "command": "npx -y ruflo@latest mcp start",
+      "npmPackage": "ruflo",
+      "verifiedVersion": "3.32.9",
+      "purpose": "멀티 에이전트 오케스트레이션(스웜, 공유 메모리, 210여 개 도구)",
+      "note": "MCP 서버 등록만 수행. ruflo init 은 CLAUDE.md/.claude 를 덮어쓸 수 있어 실행하지 않음."
+    },
+    {
+      "name": "notebooklm",
+      "scope": "user",
+      "command": "npx -y notebooklm-mcp@latest",
+      "npmPackage": "notebooklm-mcp",
+      "verifiedVersion": "2.0.0",
+      "repo": "PleasePrompto/notebooklm-mcp",
+      "purpose": "Google NotebookLM 노트북에 근거한 인용 기반 답변",
+      "requiresManualStep": "대화형 세션에서 setup_auth 실행 → Chrome 창에서 Google 로그인"
+    }
+  ]
+}

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Astryx 마이그레이션 가이드</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-alt: #f6f7f8;
+    --text: #1b1f23;
+    --text-muted: #5b6270;
+    --border: #e2e4e8;
+    --accent: #2f5fd8;
+    --accent-bg: #eaf0ff;
+    --code-bg: #0f1117;
+    --code-text: #e6e6e6;
+    --warn-bg: #fff8e6;
+    --warn-border: #e8b93f;
+    --tip-bg: #eafaf1;
+    --tip-border: #34a366;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a;
+      --bg-alt: #1b1e24;
+      --text: #e7e9ec;
+      --text-muted: #9aa1ab;
+      --border: #2b2f37;
+      --accent: #7ea1ff;
+      --accent-bg: #1d2740;
+      --code-bg: #0b0c0f;
+      --code-text: #dfe3e8;
+      --warn-bg: #2a2410;
+      --warn-border: #8a6d1e;
+      --tip-bg: #10261c;
+      --tip-border: #2f7a52;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161a; --bg-alt: #1b1e24; --text: #e7e9ec; --text-muted: #9aa1ab;
+    --border: #2b2f37; --accent: #7ea1ff; --accent-bg: #1d2740;
+    --code-bg: #0b0c0f; --code-text: #dfe3e8;
+    --warn-bg: #2a2410; --warn-border: #8a6d1e; --tip-bg: #10261c; --tip-border: #2f7a52;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff; --bg-alt: #f6f7f8; --text: #1b1f23; --text-muted: #5b6270;
+    --border: #e2e4e8; --accent: #2f5fd8; --accent-bg: #eaf0ff;
+    --code-bg: #0f1117; --code-text: #e6e6e6;
+    --warn-bg: #fff8e6; --warn-border: #e8b93f; --tip-bg: #eafaf1; --tip-border: #34a366;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    line-height: 1.65;
+  }
+  .layout { display: flex; max-width: 1160px; margin: 0 auto; }
+  nav.toc {
+    width: 260px;
+    flex-shrink: 0;
+    padding: 32px 20px;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+  nav.toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin: 0 0 12px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+  nav.toc li { counter-increment: toc; margin-bottom: 4px; }
+  nav.toc a {
+    display: block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 13.5px;
+  }
+  nav.toc a::before { content: counter(toc) ". "; color: var(--text-muted); }
+  nav.toc a:hover { background: var(--bg-alt); }
+  main { flex: 1; min-width: 0; padding: 32px 36px 80px; }
+  header.doc-header { margin-bottom: 36px; }
+  header.doc-header h1 { font-size: 28px; margin: 0 0 8px; }
+  header.doc-header p { color: var(--text-muted); margin: 0; font-size: 15px; }
+  section { margin-bottom: 44px; padding-top: 8px; border-top: 1px solid var(--border); }
+  section:first-of-type { border-top: none; }
+  section h2 { font-size: 20px; display: flex; align-items: center; gap: 10px; }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent-bg); color: var(--accent);
+    font-size: 13px; font-weight: 600; flex-shrink: 0;
+  }
+  h3 { font-size: 16px; margin-top: 28px; }
+  p { color: var(--text); }
+  ol.steps { padding-left: 0; list-style: none; counter-reset: step; }
+  ol.steps li {
+    counter-increment: step;
+    padding: 10px 14px 10px 44px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  ol.steps li:last-child { border-bottom: none; }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute; left: 8px; top: 9px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent-bg); color: var(--accent);
+    font-size: 12px; font-weight: 700; text-align: center; line-height: 22px;
+  }
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    background: var(--bg-alt);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 16px 18px;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; color: inherit; }
+  .box { border-radius: 10px; padding: 14px 18px; margin: 16px 0; border: 1px solid; }
+  .box.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .box.tip { background: var(--tip-bg); border-color: var(--tip-border); }
+  .box strong { display: block; margin-bottom: 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em; }
+  ul.checklist { list-style: none; padding: 0; }
+  ul.checklist li { padding: 6px 0 6px 26px; position: relative; }
+  ul.checklist li::before { content: "✓"; position: absolute; left: 0; color: var(--tip-border); font-weight: 700; }
+  footer { color: var(--text-muted); font-size: 12.5px; padding: 24px 36px 60px; }
+  @media (max-width: 860px) {
+    .layout { flex-direction: column; }
+    nav.toc { width: auto; position: static; max-height: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#overview">개요</a></li>
+      <li><a href="#order">마이그레이션 순서</a></li>
+      <li><a href="#cli">CLI 워크플로우</a></li>
+      <li><a href="#theme">Theme / CSS 설정</a></li>
+      <li><a href="#layers">Cascade Layer 안전 수칙</a></li>
+      <li><a href="#smoke">Foundation Smoke Test</a></li>
+      <li><a href="#frame">앱 프레임 먼저 옮기기</a></li>
+      <li><a href="#mapping">shadcn/Radix 매핑표</a></li>
+      <li><a href="#global">Command Palette / 설정 / 테마</a></li>
+      <li><a href="#verify">검증 체크리스트</a></li>
+      <li><a href="#ai">AI 에이전트용 프롬프트</a></li>
+    </ol>
+  </nav>
+  <main>
+    <header class="doc-header">
+      <h1>Astryx 마이그레이션 가이드</h1>
+      <p>기존 Tailwind / shadcn / Radix 앱을 Astryx 디자인 시스템으로 점진적으로 전환하는 방법 · 원문: astryx.atmeta.com/docs/migration</p>
+    </header>
+
+    <section id="overview">
+      <h2>개요</h2>
+      <p>이 마이그레이션은 <strong>"전역 클래스 교체"가 아니라 "제품 셸(shell)과 워크플로우의 이전"</strong>으로 접근해야 합니다. 앱을 <code>Theme</code>과 <code>AppShell</code>로 먼저 감싸고, 기존 라우팅·비즈니스 로직은 그대로 유지한 채 한 번에 한 라우트/화면씩 Astryx 컴포넌트로 옮깁니다.</p>
+      <p>마이그레이션 중에는 Tailwind와 Astryx를 함께 사용할 수 있습니다. 레거시 래퍼나 로컬 레이아웃에는 Tailwind를 계속 쓰고, 인터랙티브 컨트롤·내비게이션·명령창·폼·알럿·다이얼로그·설정 UI는 컴포넌트로 교체합니다.</p>
+    </section>
+
+    <section id="order">
+      <h2>마이그레이션 순서</h2>
+      <ol class="steps">
+        <li>디자인 시스템을 설치하고 <code>init</code>을 실행해 패키지 스크립트, 테마 CSS, 에이전트 문서를 준비합니다.</li>
+        <li>앱 루트를 <code>Theme</code>으로 감싸고 초기 light / dark / system 모드 동작을 정합니다.</li>
+        <li>컴포넌트를 교체하기 전에 Tailwind와 Astryx의 CSS <code>@layer</code> 순서를 명시적으로 선언합니다.</li>
+        <li>Foundation smoke test 페이지를 렌더링해서 프리미티브들이 padding을 유지하는지 확인합니다.</li>
+        <li>영구적인 프레임(<code>AppShell</code>, <code>TopNav</code>, <code>SideNav</code>, 페이지 콘텐츠, 모바일 내비게이션)부터 옮깁니다.</li>
+        <li>공유 프리미티브(<code>Button</code>, <code>IconButton</code>, <code>TextInput</code>, <code>Switch</code>, <code>Dialog</code>, <code>Table</code> 등)를 교체합니다.</li>
+        <li>전역 워크플로우(커맨드 팔레트, 설정 팝오버, 테마 토글, 검색, 필터, 생성 플로우, 파괴적 확인 다이얼로그)를 교체합니다.</li>
+        <li>완료된 화면에서 레거시 Tailwind 클래스를 제거하되, 아직 안 옮긴 부분을 위한 토큰 기반 유틸리티는 남겨둡니다.</li>
+        <li>다음 라우트로 넘어가기 전, light/dark 모드·키보드 내비게이션·반응형 레이아웃·empty/error/loading 상태를 모두 검증합니다.</li>
+      </ol>
+    </section>
+
+    <section id="cli">
+      <h2>CLI 워크플로우</h2>
+      <p>CLI를 마이그레이션 체크리스트처럼 사용하세요. 손대려는 패턴의 문서를 먼저 읽고, 비슷한 템플릿 스켈레톤을 확인한 다음, 정확한 컴포넌트 문서를 읽고 나서 코드를 수정합니다.</p>
+      <pre><code># 마이그레이션 진행용 CLI 순서
+npx astryx docs migration
+npx astryx docs theme
+npx astryx docs styling
+npx astryx template --list --type block
+npx astryx template AppShellTopNavWithSideNav --skeleton
+npx astryx template PopoverSettingsPanel --skeleton
+npx astryx component AppShell
+npx astryx component SideNav
+npx astryx component TopNav
+npx astryx component CommandPalette
+npx astryx component Button
+npx astryx component TextInput</code></pre>
+      <p>AI 코딩 도구에 결과를 붙여 넣을 때는 <code>--dense</code>, 자동화된 마이그레이션 리포트를 만들 때는 <code>--json</code>을 사용하세요.</p>
+      <pre><code># dense / json 모드
+npx astryx docs migration --dense
+npx astryx component Button --json</code></pre>
+    </section>
+
+    <section id="theme">
+      <h2>Theme / CSS 설정</h2>
+      <p>모든 마이그레이션된 컴포넌트가 동일한 토큰 세트를 읽도록 <code>Theme</code>을 앱 루트에 마운트합니다. 사용자가 light/dark를 전환할 수 있다면 모드 상태를 앱 상태로 관리하세요.</p>
+      <pre><code>// 루트 프로바이더 - 명시적 모드 관리
+import {Theme} from '@astryxdesign/core/theme';
+import {neutralTheme} from '@astryxdesign/theme-neutral/built';
+import {useState} from 'react';
+import '@astryxdesign/theme-neutral/theme.css';
+
+export function AppRoot({children}: {children: React.ReactNode}) {
+  const [mode, setMode] = useState&lt;'system' | 'light' | 'dark'&gt;('system');
+
+  return (
+    &lt;Theme theme={neutralTheme} mode={mode}&gt;
+      &lt;SettingsContext.Provider value={{mode, setMode}}&gt;
+        {children}
+      &lt;/SettingsContext.Provider&gt;
+    &lt;/Theme&gt;
+  );
+}</code></pre>
+
+      <h3>Tailwind v4와 공존</h3>
+      <p>디자인 시스템의 reset/theme CSS가 Tailwind 유틸리티보다 먼저 로드되어야, 마이그레이션된 컴포넌트가 기본값을 유지하면서 레거시 유틸리티 클래스도 계속 동작합니다.</p>
+      <pre><code>/* Tailwind v4 공존 */
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+@import "@astryxdesign/theme-neutral/theme.css";
+@import "@astryxdesign/core/tailwind-theme.css";
+@import "tailwindcss/utilities.css" layer(utilities);</code></pre>
+
+      <h3>Tailwind v3와 공존</h3>
+      <p>v3에는 <code>preflight.css</code>가 없으므로 <code>@tailwind base</code> 지시문을 named layer로 감쌉니다. 유틸리티는 레이어 없이 두어 기존 앱 유틸리티 클래스가 계속 우선하도록 합니다.</p>
+      <pre><code>/* Tailwind v3 공존 */
+@layer reset, tw-preflight, astryx-base, astryx-theme;
+
+@import "@astryxdesign/core/reset.css";
+@import "@astryxdesign/core/astryx.css";
+@import "@astryxdesign/theme-neutral/theme.css";
+
+@layer tw-preflight {
+  @tailwind base; /* layered: astryx-theme가 preflight를 이김 */
+}
+@tailwind components;
+@tailwind utilities; /* unlayered: 기존 유틸리티 클래스가 계속 우선 */</code></pre>
+    </section>
+
+    <section id="layers">
+      <h2>Cascade Layer 안전 수칙</h2>
+      <div class="box warn">
+        <strong>가장 흔한 마이그레이션 장애 원인</strong>
+        <code>layer()</code> 키워드 없이 최상위에서 <code>@import</code>된 스타일시트는 <strong>레이어가 지정되지 않은(unlayered)</strong> 상태로 남아, 명시된 모든 <code>@layer</code>보다 우선 적용됩니다. 에러나 경고 없이 조용히 컴포넌트 스타일을 덮어써 버립니다.
+      </div>
+      <p>레이어가 전혀 없는 스타일시트에서 <code>* { padding: 0 }</code>같은 specificity 0짜리 리셋은 어떤 클래스 선택자에도 지지만, 레이어가 도입되면 규칙이 두 번 바뀝니다: <strong>레이어 없는 스타일은 지정된 모든 레이어를 이기고</strong>, <strong>나중에 선언된 레이어가 이전 레이어를 이깁니다</strong> — specificity와 무관하게요. 그래서 동일한 리셋 코드가 레이어 없이 남거나 <code>astryx-base</code> 뒤에 선언된 레이어에 들어가면, 모든 컴포넌트 스타일을 이겨버립니다.</p>
+      <pre><code>/* 레거시 리셋에 레이어를 명시적으로 지정 */
+/* 변경 전: @import "./legacy-reset.css";  (unlayered: 모든 레이어를 이김) */
+@import "./legacy-reset.css" layer(reset);</code></pre>
+      <p>화면을 만들기 전에 아래 체크리스트로 레이어 상태를 점검하세요.</p>
+      <ul class="checklist">
+        <li>어떤 <code>@import</code>보다도 먼저, 표준 <code>@layer</code> 순서를 한 번만 선언한다. webpack 기반 번들러(Next.js 포함)는 <code>@import</code> 내용을 그 뒤에 오는 인라인 CSS보다 위로 끌어올리므로, 순서 선언은 <code>layers.css</code>처럼 별도 파일에 두고 가장 먼저 import한다.</li>
+        <li>기존 전역/리셋 스타일시트를 모두 점검해서 각각 의도적으로 레이어를 지정한다. <code>layer()</code> 없는 최상위 import는 unlayered로 남아 모든 레이어를 이기고, 레이어가 지정된 파일 안에 중첩된 import는 그 레이어를 그대로 물려받는다.</li>
+        <li>앱의 레거시 리셋을 제거하거나 reset 레이어로 낮춘다. 디자인 시스템은 자체 <code>:where()</code> 리셋을 가장 낮은 레이어에서 제공하므로, 앱 리셋은 같은 reset 레이어에만 있어야 하고 <code>astryx-base</code>보다 위 레이어에 있으면 안 된다.</li>
+        <li>Tailwind preflight에 레이어를 지정한다. v4는 <code>preflight.css</code>를 <code>layer(base)</code>로 import, v3는 <code>@tailwind base</code>를 named layer로 감싼다. 레이어 없는 preflight는 조용히 theme CSS를 덮어쓴다.</li>
+        <li><code>moduleResolution</code>을 <code>bundler</code> 또는 <code>node16</code> 이상으로 설정해 <code>@astryxdesign/core/reset.css</code>같은 subpath import가 해석되도록 한다.</li>
+        <li>개별 색상 토큰을 손으로 쓰는 대신 <code>defineTheme</code>과 accent family API로 테마를 정의한다. <code>--color-accent</code>만 손으로 쓰면 <code>--color-on-accent</code> 같은 파생 토큰이 오래된 흰색 기본값으로 남아 새 accent 색과의 대비가 보장되지 않는다.</li>
+        <li>어떤 라우트를 옮기기 전에도, 아래 Foundation Smoke Test를 먼저 실행하고 light/dark 모드에서 컴포넌트 몇 개를 직접 확인한다.</li>
+      </ul>
+      <div class="box tip">
+        <strong>기억할 것</strong>
+        컴포넌트에 적어 넣은 className/유틸리티 클래스는 어느 경우든 DOM에 도달합니다. 그 클래스가 컴포넌트 스타일을 이기는지는 <em>source order</em> 문제가 아니라 <em>레이어</em> 문제입니다. 앱 유틸리티는 <code>utilities</code> 레이어에 두어야 계속 이길 수 있습니다.
+      </div>
+    </section>
+
+    <section id="smoke">
+      <h2>Foundation Smoke Test</h2>
+      <p>레이어 순서가 깨지면 모든 페이지에서 조용히, 동일하게 실패합니다. N개 화면을 옮긴 뒤 발견하지 말고, 기능 작업 전에 먼저 잡아내세요. 첫 마이그레이션 단계로 프리미티브 몇 개를 렌더링하는 임시 페이지를 하나 만듭니다.</p>
+      <pre><code>// Foundation check page
+import {useState} from 'react';
+import {Button} from '@astryxdesign/core/Button';
+import {Card} from '@astryxdesign/core/Card';
+import {Table} from '@astryxdesign/core/Table';
+import {TextInput} from '@astryxdesign/core/TextInput';
+import {VStack} from '@astryxdesign/core/VStack';
+
+export default function FoundationCheck() {
+  const [email, setEmail] = useState('');
+
+  return (
+    &lt;div data-foundation-check&gt;
+      &lt;VStack gap={4}&gt;
+        &lt;Button label="Primary action" variant="primary" /&gt;
+        &lt;TextInput
+          label="Email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={setEmail}
+        /&gt;
+        &lt;Card&gt;One card with default padding&lt;/Card&gt;
+        &lt;Table
+          data={[{name: 'Foundation', status: 'ok'}]}
+          columns={[
+            {key: 'name', header: 'Name'},
+            {key: 'status', header: 'Status'},
+          ]}
+        /&gt;
+      &lt;/VStack&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+      <p>버튼에 눈에 보이는 padding과 filled primary 배경이 있고, input과 card에 border와 내부 spacing이 있다면 기반이 정상입니다. 테스트 러너나 dev 전용 effect에서 돌릴 수 있는 assertion은 다음과 같습니다.</p>
+      <pre><code>// Foundation assertion
+const button = document.querySelector&lt;HTMLButtonElement&gt;(
+  '[data-foundation-check] button',
+);
+if (!button) {
+  throw new Error('Foundation check page did not render a button.');
+}
+if (getComputedStyle(button).paddingInline === '0px') {
+  throw new Error(
+    'Foundation broken: an unlayered reset or a later cascade layer is ' +
+      'overriding component styles. Check that no app reset sits outside ' +
+      'the reset layer.',
+  );
+}</code></pre>
+      <p>이 검사가 실패하면 원인은 거의 항상 레이어 순서입니다. padding을 0으로 만드는 스타일시트를 찾아 reset 레이어로 옮기거나 삭제하세요.</p>
+    </section>
+
+    <section id="frame">
+      <h2>앱 프레임 먼저 옮기기</h2>
+      <p><code>AppShell</code>부터 시작하면, 최종 내비게이션·spacing·surface·반응형 프레임 안에서 페이지 마이그레이션이 이루어집니다. 모든 라우트가 같은 셸을 공유하기 때문에 테마/색상 문제도 초기에 드러납니다.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>기존 요소</th><th>Astryx 컴포넌트</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>Header</td><td><code>TopNav</code></td><td>제품 아이덴티티, 전역 액션, 계정 진입점, 커맨드/검색 트리거용</td></tr>
+          <tr><td>Sidebar</td><td><code>SideNav</code></td><td>라우트 그룹 단위로 섹션과 중첩 nav item 사용, 선택 상태는 라우터가 기준</td></tr>
+          <tr><td>Main page wrapper</td><td><code>AppShell</code> + <code>Layout</code></td><td>셸이 영구 구조를, 라우트 컴포넌트가 페이지 콘텐츠를 소유</td></tr>
+          <tr><td>Mobile drawer nav</td><td><code>MobileNav</code> 또는 <code>AppShell</code>의 모바일 동작</td><td>좁은 뷰포트에서 focus, close 동작, 라우트 변경을 검증</td></tr>
+          <tr><td>Settings menu</td><td><code>Popover</code> + <code>Layout</code> + <code>Switch</code></td><td>테마 모드와 앱 환경설정의 홈으로 사용</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <section id="mapping">
+      <h2>shadcn / Radix 프리미티브 매핑</h2>
+      <p>기존 shadcn 컴포넌트를 디자인 시스템 스타일로 감싸지 마세요. 동작·접근성·상태 클래스·토큰 사용까지 책임지는 컴포넌트로 프리미티브 자체를 교체합니다.</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>기존 프리미티브</th><th>Astryx 컴포넌트</th><th>마이그레이션 노트</th></tr></thead>
+        <tbody>
+          <tr><td>button / shadcn Button</td><td><code>Button</code> / <code>IconButton</code></td><td>레이블 있는 커맨드는 Button, 아이콘 전용 툴바 액션은 IconButton</td></tr>
+          <tr><td>input</td><td><code>TextInput</code></td><td>임시 border 클래스 대신 status prop으로 유효성 상태 표현</td></tr>
+          <tr><td>textarea</td><td><code>TextArea</code></td><td>여러 줄 편집이 주된 액션일 때 사용</td></tr>
+          <tr><td>switch</td><td><code>Switch</code></td><td>영속 boolean 설정에 사용 (테마 모드가 이진 선택이면 포함)</td></tr>
+          <tr><td>checkbox</td><td><code>CheckboxInput</code> / <code>CheckboxList</code></td><td>그룹 선택은 list variant 사용</td></tr>
+          <tr><td>radio group</td><td><code>RadioList</code></td><td>보이는 옵션 집합에서 하나를 선택해야 할 때</td></tr>
+          <tr><td>select / combobox</td><td><code>Selector</code> / <code>Typeahead</code></td><td>제한된 옵션은 Selector, 검색 가능한 비동기 옵션은 Typeahead</td></tr>
+          <tr><td>tabs used as page nav</td><td><code>TabList</code></td><td>라우트 상태 또는 현재 페이지 상태를 source of truth로</td></tr>
+          <tr><td>command dialog</td><td><code>CommandPalette</code></td><td>앱 전용 검색 소스는 셸 바깥에 두고 검색 가능한 항목을 주입</td></tr>
+          <tr><td>dropdown action menu</td><td><code>DropdownMenu</code> / <code>MoreMenu</code></td><td>압축된 오버플로우 액션에는 MoreMenu</td></tr>
+          <tr><td>alert / callout</td><td><code>Banner</code> / <code>Toast</code></td><td>페이지/섹션 메시지는 Banner, 일시적 피드백은 Toast</td></tr>
+          <tr><td>dialog</td><td><code>Dialog</code> / <code>AlertDialog</code></td><td>파괴적 확인은 AlertDialog, 일반 작업 플로우는 Dialog</td></tr>
+          <tr><td>card-like list row</td><td><code>ListItem</code></td><td>선택 가능한 행에는 Button을 행처럼 스타일링하지 말고 ListItem 사용</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <section id="global">
+      <h2>Command Palette / 설정 / 테마</h2>
+      <p>셸이 갖춰진 뒤 전역 검색을 <code>CommandPalette</code>로 옮기세요. 팔레트는 라우트, 컨텍스트 액션, 생성 액션, 필터, 최근 항목, 엔티티 결과 등 앱 커맨드에 대한 하나의 뷰로 취급합니다. 검색 소스가 항상 검색 가능한 항목의 배열을 반환하도록 데이터 정규화는 앱 코드에서 유지하세요.</p>
+      <p>light/dark 모드 컨트롤은 설정 팝오버나 계정 메뉴에 둡니다. Switch/Selector는 독립된 body 클래스를 토글하는 대신 <code>Theme</code>에 전달되는 모드 값을 갱신해야 합니다.</p>
+      <pre><code>// 설정 팝오버의 테마 컨트롤
+function ThemeModeSwitch() {
+  const {mode, setMode} = useSettings();
+  const isDark = mode === 'dark';
+
+  return (
+    &lt;Switch
+      label="Dark mode"
+      description="Use the dark color theme"
+      value={isDark}
+      onChange={next =&gt; setMode(next ? 'dark' : 'light')}
+    /&gt;
+  );
+}</code></pre>
+    </section>
+
+    <section id="verify">
+      <h2>검증 체크리스트</h2>
+      <ul class="checklist">
+        <li>light/dark 모드로 앱을 실행하고 surface, border, 텍스트, 아이콘, hover 상태, focus ring, 상태 색상이 자연스럽게 어울리는지 확인한다.</li>
+        <li>셸에서 커맨드 팔레트를 열어 입력하고, 키보드로 항목을 선택하고, focus가 트리거로 돌아오는지 확인한다.</li>
+        <li>SideNav를 collapsed, expanded, active, hover, nested, mobile 상태에서 모두 확인한다.</li>
+        <li>설정 팝오버와 다이얼로그를 jsdom과 실제 브라우저 양쪽에서 검증한다 (네이티브 dialog/Popover API는 테스트 shim이 필요할 수 있다).</li>
+        <li>각 라우트 마이그레이션 후 남아있는 하드코딩된 Tailwind 색상, 임의의 hex 값, 일회성 hover 색상을 찾아본다.</li>
+        <li>마이그레이션한 라우트마다 컴포넌트 테스트, 빌드, 최소 1회의 브라우저 스크린샷 검증을 실행한다.</li>
+      </ul>
+    </section>
+
+    <section id="ai">
+      <h2>AI 에이전트용 프롬프트</h2>
+      <p>AI 코딩 에이전트를 쓸 때는 "전체 앱을 다시 써줘" 대신, 명시적인 마이그레이션 루프를 지시하세요.</p>
+      <pre><code>// AI에 붙여넣을 프롬프트
+We are migrating this existing Tailwind/shadcn app to Astryx incrementally.
+
+First run:
+- npx astryx docs migration --dense
+- npx astryx docs theme --dense
+- npx astryx docs styling --dense
+- npx astryx template AppShellTopNavWithSideNav --skeleton
+
+Then migrate one route or shell surface at a time. Keep business logic and
+routing intact. Replace shadcn/Radix/Tailwind primitives with Astryx
+components, remove hardcoded colors, verify light and dark mode, and take
+screenshots before moving to the next surface.</code></pre>
+      <div class="box tip">
+        <strong>이 프로젝트에서는</strong>
+        위 내용이 <code>.claude/CLAUDE.md</code>의 <code>ASTRYX:MIGRATION</code> 섹션에 요약되어 있어서, Claude Code가 마이그레이션 작업을 할 때 자동으로 참고합니다. 전체 원문은 언제든 <code>npx astryx docs migration</code>으로 다시 확인할 수 있습니다.
+      </div>
+    </section>
+  </main>
+</div>
+<footer>출처: astryx.atmeta.com/docs/migration · npx astryx docs migration --dense (astryx v0.1.6)</footer>
+</body>
+</html>

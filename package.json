@@ -1,0 +1,10 @@
+{
+  "name": "astryx-project",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@astryxdesign/cli": "^0.1.6",
+    "@astryxdesign/core": "^0.1.6",
+    "@astryxdesign/theme-neutral": "^0.1.6"
+  }
+}
