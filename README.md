@@ -15,6 +15,8 @@
 
 - **바로 보기 (GitHub Pages)** → **https://allenst486db.github.io/TY_claude_skills/**
 - **소스** → [`docs/guide.html`](./docs/guide.html) (내려받아 브라우저로 열어도 됩니다)
+- **전체 스택 재현 가이드** → [`docs/stack-guide.html`](./docs/stack-guide.html)
+  — 스킬뿐 아니라 **플러그인·MCP 서버까지** 한 번에 옮기는 방법 ([5번](#5-전체-스택-재현-플러그인--mcp-포함) 참고)
 
 > GitHub의 README는 마크다운만 렌더링해 CSS·SVG가 제거되므로, 스타일이 적용된 가이드는
 > HTML 문서로 제공하고 GitHub Pages로 호스팅합니다. 아래 마크다운 절차만 따라도 동일하게
@@ -37,6 +39,10 @@
 | [`mosikdo-guide`](./mosikdo-guide) | macOS 스타일 HTML 가이드 문서 + 인라인 SVG 모식도 디자인 시스템 |
 
 각 스킬은 `<skill-name>/SKILL.md` 구조를 가집니다.
+
+> 위 표는 **이 리포에 직접 담긴** 자체 제작 스킬입니다. 남의 저장소에서 가져다 쓰는 스킬 20종은
+> 파일을 복사해 두지 않고 [`setup/claude-stack.json`](./setup/claude-stack.json)에 **출처와 고정 커밋만**
+> 기록해 둡니다. 설치는 [5번](#5-전체-스택-재현-플러그인--mcp-포함)의 스크립트가 처리합니다.
 
 ---
 
@@ -138,3 +144,65 @@ git push
 `~/.claude/skills/<skill-name>/SKILL.md` 구조로 폴더를 만들고 커밋·push 하면,
 다른 PC에서 `git pull` 로 받아 쓸 수 있습니다. `SKILL.md` 의 `name` 은 폴더명과
 같게, `description` 에는 "언제 이 스킬을 쓰는지"를 구체적으로 적어야 잘 발동합니다.
+
+남의 저장소 스킬을 스택에 편입할 때는 파일을 복사하지 말고
+[`setup/claude-stack.json`](./setup/claude-stack.json) 의 `externalSkills` 에
+`name`·`repo`·`path` 를 적고 `pinnedCommits` 에 그 저장소의 커밋 SHA 를 추가합니다.
+
+---
+
+## 5. 전체 스택 재현 (플러그인 · MCP 포함)
+
+위 1~4번은 **스킬 폴더**를 동기화하는 방법입니다. 플러그인과 MCP 서버는 파일이 아니라
+`claude` CLI 로 등록되므로 git 만으로는 따라오지 않습니다.
+[`setup/claude-stack.json`](./setup/claude-stack.json) 이 그 전부(스킬 21종 · 플러그인 6종 ·
+MCP 서버 2종)를 담고 있고, `setup/install.mjs` 가 그대로 재현합니다.
+
+> 동기화하지 않기로 한 스킬은 매니페스트의 `localOnlySkills` 에 기록만 해 둡니다.
+> 설치 스크립트는 이 항목을 건드리지 않으므로, 해당 스킬은 PC 마다 수동으로 옮겨야 합니다.
+
+```bash
+# 새 PC — 리포를 skills 디렉터리로 clone 한 경우
+node ~/.claude/skills/setup/install.mjs --dry-run   # 무엇을 할지만 출력
+node ~/.claude/skills/setup/install.mjs             # 실제 실행
+```
+```powershell
+# Windows
+pwsh -File "$env:USERPROFILE\.claude\skills\setup\install.ps1" --dry-run
+pwsh -File "$env:USERPROFILE\.claude\skills\setup\install.ps1"
+```
+
+이미 로컬 스킬이 있어 skills 디렉터리를 통째로 clone 할 수 없는 PC라면, 리포를 아무 데나
+받아서 스크립트만 실행하면 됩니다 — 기존 스킬은 건드리지 않고 없는 것만 채웁니다.
+
+### 안전 규칙 — 기존 것을 잃지 않습니다
+
+| 상황 | 동작 |
+|---|---|
+| 폴더가 없음 | **설치** |
+| 내용이 같음 (폴더 전체 SHA-256 비교) | **건너뜀** |
+| 내용이 다름 | `<이름>.bak-<타임스탬프>` 로 **백업한 뒤 교체** |
+| 심볼릭 링크임 | **건너뜀** (다른 도구가 관리 중) |
+
+파일을 지우는 경로가 없습니다. 백업 폴더는 자동으로 삭제되지 않으니 확인 후 직접 지우세요.
+
+### 버전 고정
+
+`pinnedCommits` 에 저장소별 커밋 SHA 를 박아 두어 **모든 PC가 같은 버전**을 받습니다.
+최신으로 올리려면 `--latest` 로 실행해 확인한 뒤, 잘 돌면 그 SHA 로 매니페스트를 갱신해 커밋합니다.
+
+```bash
+node setup/install.mjs --latest --dry-run   # 무엇이 바뀌는지
+node setup/install.mjs --latest             # 적용
+git ls-remote https://github.com/heygen-com/hyperframes.git HEAD   # 새 SHA 확인
+```
+
+부분 실행 플래그: `--skills` · `--plugins` · `--mcp`
+
+### 스크립트가 못 하는 것
+
+- **NotebookLM 인증** — 대화형 `claude` 세션에서 `setup_auth` 실행 → Chrome 에서 Google 로그인 (PC당 1회)
+- **claude.ai 커넥터** (Notion·Figma·Gamma 등) — 계정 단위라 로그인하면 자동으로 따라옵니다
+- **Claude Code 재시작** — 새 스킬·플러그인은 재시작해야 로드됩니다
+
+자세한 설명과 모식도는 [`docs/stack-guide.html`](./docs/stack-guide.html) 에 있습니다.
