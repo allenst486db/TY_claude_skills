@@ -2,6 +2,10 @@
 
 작성일: 2026-07-25 · 대상 환경: Windows 11 / Claude Code 2.1.214 / Node v24.14.0
 
+> 📘 **읽기 좋은 버전** → [`claude-skills-setup-guide.html`](./claude-skills-setup-guide.html)
+> — `mosikdo-guide` 디자인 시스템(macOS 스타일 + 인라인 SVG 모식도)으로 만든 같은 내용의 HTML 문서입니다.
+> 설치 구조·caveman 분기·Ruflo init 위험·NotebookLM 인증 흐름이 모식도로 들어 있습니다.
+
 이번에 추가한 7개 항목의 **출처 · 설치 방법 · 사용법 · 주의사항**을 정리한 문서입니다.
 새 머신에서 동일하게 재현하려면 [`scripts/install-claude-skills.ps1`](../scripts/install-claude-skills.ps1)
 (또는 `.sh`)을 실행하면 되고, 기계가 읽는 명세는 [`claude-stack.json`](../claude-stack.json)에 있습니다.
@@ -241,6 +245,7 @@ Windows에서 WSL을 쓴다면 **WSL2 + WSLg 필요** (WSL1은 Chromium 실행 �
 | `~/.claude/settings.json` | `enabledPlugins` 에 3개, `extraKnownMarketplaces` 에 3개 **추가**. 기존 항목·테마 그대로 유지 |
 | `~/.claude.json` | MCP 서버 `ruflo`, `notebooklm` 추가 |
 | `~/.claude/skills/deep-research/` | 신규 clone |
+| `~/.claude/skills/mosikdo-guide/` | 신규 — `allenst486db/TY_claude_skills` 의 가이드 문서 디자인 시스템 |
 | `~/.claude/plugins/` | 마켓플레이스 3개 + 플러그인 3개 캐시 |
 | `%APPDATA%\caveman\config.json` | 신규 생성 (`defaultMode: off`) |
 | 이 저장소 | `claude-stack.json`, `scripts/`, `docs/claude-skills-setup-guide.md`, `.gitignore` 신규 |

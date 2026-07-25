@@ -72,7 +72,20 @@ else
     "$CLAUDE_DIR/skills/deep-research"
 fi
 
-# ---------------------------------------------------------------- 5. MCP 서버
+# --------------------------------------------- 5. mosikdo-guide 스킬 (가이드 문서 스타일)
+step "mosikdo-guide 스킬 설치 (macOS 스타일 HTML 가이드 + SVG 모식도)"
+if [ -d "$CLAUDE_DIR/skills/mosikdo-guide" ]; then
+  skip "$CLAUDE_DIR/skills/mosikdo-guide 이미 존재"
+else
+  TMP_TY="$(mktemp -d)"
+  git clone --depth 1 https://github.com/allenst486db/TY_claude_skills.git "$TMP_TY/repo"
+  mkdir -p "$CLAUDE_DIR/skills"
+  cp -r "$TMP_TY/repo/mosikdo-guide" "$CLAUDE_DIR/skills/mosikdo-guide"
+  rm -rf "$TMP_TY"
+  echo "    설치됨: $CLAUDE_DIR/skills/mosikdo-guide"
+fi
+
+# ---------------------------------------------------------------- 6. MCP 서버
 step "MCP 서버 등록 (user 스코프)"
 EXISTING="$(claude mcp list 2>&1 || true)"
 

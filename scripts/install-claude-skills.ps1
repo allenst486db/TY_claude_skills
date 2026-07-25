@@ -72,7 +72,21 @@ if (Test-Path $drPath) {
     git clone --depth 1 https://github.com/199-biotechnologies/claude-deep-research-skill.git $drPath
 }
 
-# ---------------------------------------------------------------- 5. MCP 서버
+# --------------------------------------------- 5. mosikdo-guide 스킬 (가이드 문서 스타일)
+Write-Step 'mosikdo-guide 스킬 설치 (macOS 스타일 HTML 가이드 + SVG 모식도)'
+$mgPath = Join-Path $claudeDir 'skills\mosikdo-guide'
+if (Test-Path $mgPath) {
+    Write-Skip "$mgPath 이미 존재"
+} else {
+    $tmpTy = Join-Path ([System.IO.Path]::GetTempPath()) ("ty_" + [guid]::NewGuid().ToString('N').Substring(0,8))
+    git clone --depth 1 https://github.com/allenst486db/TY_claude_skills.git $tmpTy
+    New-Item -ItemType Directory -Force -Path (Split-Path $mgPath) | Out-Null
+    Copy-Item (Join-Path $tmpTy 'mosikdo-guide') $mgPath -Recurse
+    Remove-Item $tmpTy -Recurse -Force
+    Write-Host "    설치됨: $mgPath"
+}
+
+# ---------------------------------------------------------------- 6. MCP 서버
 Write-Step 'MCP 서버 등록 (user 스코프)'
 $existing = (claude mcp list 2>&1 | Out-String)
 

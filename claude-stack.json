@@ -49,6 +49,15 @@
       "installPath": "~/.claude/skills/deep-research",
       "purpose": "다중 소스 인용 추적 리서치 파이프라인(quick/standard/deep/ultradeep 4모드)",
       "optionalDeps": ["search-cli (다중 검색 제공자 집계)", "weasyprint (PDF 출력)"]
+    },
+    {
+      "name": "mosikdo-guide",
+      "repo": "allenst486db/TY_claude_skills",
+      "installMethod": "sparse copy",
+      "sourcePath": "mosikdo-guide/",
+      "installPath": "~/.claude/skills/mosikdo-guide",
+      "purpose": "macOS 스타일 HTML 가이드 문서 + 인라인 SVG 모식도 디자인 시스템",
+      "note": "가이드 문서(docs/*.html)는 이 스킬의 토큰/컴포넌트 규약으로 작성한다."
     }
   ],
   "mcpServers": [
