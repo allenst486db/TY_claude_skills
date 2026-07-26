@@ -25,10 +25,15 @@ $claudeDir = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-
 # ------------------------------------------------------------ 1. 마켓플레이스
 Write-Step '플러그인 마켓플레이스 등록'
 $marketplaces = @(
+    @{ name = 'claude-plugins-official'; repo = 'anthropics/claude-plugins-official' },
+    @{ name = 'thedotmack';           repo = 'thedotmack/claude-mem' },
     @{ name = 'karpathy-skills';      repo = 'forrestchang/andrej-karpathy-skills' },
     @{ name = 'caveman';              repo = 'JuliusBrussee/caveman' },
     @{ name = 'handoff';              repo = 'thepushkarp/handoff' },
-    @{ name = 'ui-ux-pro-max-skill';  repo = 'nextlevelbuilder/ui-ux-pro-max-skill' }
+    @{ name = 'ui-ux-pro-max-skill';  repo = 'nextlevelbuilder/ui-ux-pro-max-skill' },
+    @{ name = 'claude-video';         repo = 'bradautomates/claude-video' },
+    @{ name = 'ponytail';             repo = 'DietrichGebert/ponytail' },
+    @{ name = 'impeccable';           repo = 'pbakaus/impeccable' }
 )
 foreach ($m in $marketplaces) {
     Write-Host "  - $($m.repo)"
@@ -38,10 +43,15 @@ foreach ($m in $marketplaces) {
 # ---------------------------------------------------------------- 2. 플러그인
 Write-Step '플러그인 설치'
 $plugins = @(
+    'superpowers@claude-plugins-official',
+    'claude-mem@thedotmack',
     'andrej-karpathy-skills@karpathy-skills',
     'caveman@caveman',
     'handoff@handoff',
-    'ui-ux-pro-max@ui-ux-pro-max-skill'
+    'ui-ux-pro-max@ui-ux-pro-max-skill',
+    'watch@claude-video',
+    'ponytail@ponytail',
+    'impeccable@impeccable'
 )
 foreach ($p in $plugins) {
     Write-Host "  - $p"
@@ -86,7 +96,40 @@ if (Test-Path $mgPath) {
     Write-Host "    설치됨: $mgPath"
 }
 
-# ---------------------------------------------------------------- 6. MCP 서버
+# ------------------------------------------- 6. pip 기반 스킬 (graphify, notebooklm-py)
+Write-Step 'pip 기반 스킬 설치 (graphify · notebooklm-py)'
+if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+    Write-Host '    python 을 찾을 수 없어 graphify/notebooklm-py 를 건너뜁니다.' -ForegroundColor Yellow
+} else {
+    # pip --user 설치 스크립트 경로를 이번 세션 PATH 에 임시로 추가
+    $userScripts = python -c "import sysconfig;print(sysconfig.get_path('scripts',scheme='nt_user'))" 2>$null
+    if ($userScripts -and (Test-Path $userScripts) -and ($env:Path -notlike "*$userScripts*")) {
+        $env:Path = "$env:Path;$userScripts"
+    }
+
+    # graphify — PyPI 이름은 graphifyy, CLI 는 graphify
+    python -m pip install --disable-pip-version-check --quiet graphifyy
+    graphify install    # ~/.claude/skills/graphify + CLAUDE.md 트리거 한 줄 append
+
+    # notebooklm-py — CLI + Playwright 브라우저 자동화
+    python -m pip install --disable-pip-version-check --quiet "notebooklm-py[browser]"
+    notebooklm skill install
+    playwright install chromium
+
+    # claude-video(/watch) 의 필수 의존성
+    python -m pip install --disable-pip-version-check --quiet yt-dlp
+
+    Write-Host "    사용자 스크립트 경로: $userScripts" -ForegroundColor DarkGray
+    if ($userScripts -and (([Environment]::GetEnvironmentVariable('Path','User') -split ';') -notcontains $userScripts)) {
+        Write-Host '    ↑ 이 경로를 사용자 PATH 에 추가해야 graphify/notebooklm/yt-dlp 명령이 잡힙니다.' -ForegroundColor Yellow
+    }
+}
+
+if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+    Write-Host '    ffmpeg 미설치 — /watch 가 동작하지 않습니다. 수동 설치: winget install Gyan.FFmpeg' -ForegroundColor Yellow
+}
+
+# ---------------------------------------------------------------- 7. MCP 서버
 Write-Step 'MCP 서버 등록 (user 스코프)'
 $existing = (claude mcp list 2>&1 | Out-String)
 
@@ -106,8 +149,11 @@ if ($existing -match '(?m)^\s*notebooklm:') {
 Write-Step '완료'
 Write-Host @'
 남은 수동 단계:
-  1. NotebookLM 인증 — 대화형 claude 세션에서 setup_auth 도구를 실행하면
-     Chrome 창이 열립니다. Google 계정으로 로그인하면 쿠키가 저장됩니다.
+  1. NotebookLM 인증 — (a) MCP: 대화형 claude 세션에서 setup_auth 도구 실행,
+     (b) CLI: notebooklm login  → 둘 다 브라우저 창에서 Google 로그인이 필요합니다.
+     확인: notebooklm auth check --test
+  1-b. ffmpeg 설치 (claude-video /watch 필수):  winget install Gyan.FFmpeg
+  1-c. 프로젝트별 1회:  /impeccable init  (PRODUCT.md / DESIGN.md 생성)
   2. (선택) deep-research 서브에이전트의 권한 프롬프트를 줄이려면
      ~/.claude/settings.json 의 permissions.allow 에
      "WebSearch", "WebFetch", "Glob", "Grep", "Read" 를 추가하세요.

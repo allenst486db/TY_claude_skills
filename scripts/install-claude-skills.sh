@@ -24,10 +24,15 @@ CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 # ------------------------------------------------------------ 1. 마켓플레이스
 step "플러그인 마켓플레이스 등록"
 for repo in \
+  anthropics/claude-plugins-official \
+  thedotmack/claude-mem \
   forrestchang/andrej-karpathy-skills \
   JuliusBrussee/caveman \
   thepushkarp/handoff \
-  nextlevelbuilder/ui-ux-pro-max-skill
+  nextlevelbuilder/ui-ux-pro-max-skill \
+  bradautomates/claude-video \
+  DietrichGebert/ponytail \
+  pbakaus/impeccable
 do
   echo "  - $repo"
   claude plugin marketplace add "$repo" 2>&1 | tail -1
@@ -36,10 +41,15 @@ done
 # ---------------------------------------------------------------- 2. 플러그인
 step "플러그인 설치"
 for p in \
+  superpowers@claude-plugins-official \
+  claude-mem@thedotmack \
   andrej-karpathy-skills@karpathy-skills \
   caveman@caveman \
   handoff@handoff \
-  ui-ux-pro-max@ui-ux-pro-max-skill
+  ui-ux-pro-max@ui-ux-pro-max-skill \
+  watch@claude-video \
+  ponytail@ponytail \
+  impeccable@impeccable
 do
   echo "  - $p"
   claude plugin install "$p" 2>&1 | tail -1
@@ -85,7 +95,38 @@ else
   echo "    설치됨: $CLAUDE_DIR/skills/mosikdo-guide"
 fi
 
-# ---------------------------------------------------------------- 6. MCP 서버
+# ------------------------------------------- 6. pip 기반 스킬 (graphify, notebooklm-py)
+step "pip 기반 스킬 설치 (graphify · notebooklm-py)"
+PY="$(command -v python3 || command -v python || true)"
+if [ -z "$PY" ]; then
+  echo "    python 을 찾을 수 없어 graphify/notebooklm-py 를 건너뜁니다."
+else
+  # pip --user 설치 스크립트 경로를 이번 세션 PATH 에 임시로 추가
+  USER_SCRIPTS="$("$PY" -c 'import sysconfig,os;print(sysconfig.get_path("scripts",scheme=("nt_user" if os.name=="nt" else "posix_user")))' 2>/dev/null || true)"
+  case ":$PATH:" in
+    *":$USER_SCRIPTS:"*) ;;
+    *) [ -n "$USER_SCRIPTS" ] && PATH="$PATH:$USER_SCRIPTS" ;;
+  esac
+
+  # graphify — PyPI 이름은 graphifyy, CLI 는 graphify
+  "$PY" -m pip install --disable-pip-version-check --quiet graphifyy
+  graphify install    # ~/.claude/skills/graphify + CLAUDE.md 트리거 한 줄 append
+
+  # notebooklm-py — CLI + Playwright 브라우저 자동화
+  "$PY" -m pip install --disable-pip-version-check --quiet "notebooklm-py[browser]"
+  notebooklm skill install
+  playwright install chromium
+
+  # claude-video(/watch) 의 필수 의존성
+  "$PY" -m pip install --disable-pip-version-check --quiet yt-dlp
+
+  echo "    사용자 스크립트 경로: ${USER_SCRIPTS:-?} (셸 rc 의 PATH 에 추가하세요)"
+fi
+
+command -v ffmpeg >/dev/null 2>&1 || \
+  echo "    ffmpeg 미설치 — /watch 가 동작하지 않습니다. macOS: brew install ffmpeg / Windows: winget install Gyan.FFmpeg"
+
+# ---------------------------------------------------------------- 7. MCP 서버
 step "MCP 서버 등록 (user 스코프)"
 EXISTING="$(claude mcp list 2>&1 || true)"
 
@@ -105,8 +146,12 @@ fi
 step "완료"
 cat <<'EOF'
 남은 수동 단계:
-  1. NotebookLM 인증 — 대화형 claude 세션에서 setup_auth 도구를 실행하면
-     Chrome 창이 열립니다. Google 계정으로 로그인하면 쿠키가 저장됩니다.
+  1. NotebookLM 인증 — (a) MCP: 대화형 claude 세션에서 setup_auth 도구 실행,
+     (b) CLI: notebooklm login  → 둘 다 브라우저 창에서 Google 로그인이 필요합니다.
+     확인: notebooklm auth check --test
+  1-b. ffmpeg 설치 (claude-video /watch 필수):
+     macOS: brew install ffmpeg / Windows: winget install Gyan.FFmpeg
+  1-c. 프로젝트별 1회:  /impeccable init  (PRODUCT.md / DESIGN.md 생성)
   2. (선택) deep-research 서브에이전트의 권한 프롬프트를 줄이려면
      ~/.claude/settings.json 의 permissions.allow 에
      "WebSearch", "WebFetch", "Glob", "Grep", "Read" 를 추가하세요.
