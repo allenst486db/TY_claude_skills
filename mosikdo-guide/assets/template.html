@@ -1,4 +1,4 @@
-<!-- ============================================================
+﻿<!-- ============================================================
   모식도 가이드 · macOS Schematic Guide — 시작 템플릿
   - Artifact 게시 시: 아래 <title>+<style>+본문만 사용 (doctype/html/head/body 래퍼 제거)
   - 로컬 .html 저장 시: 그대로 브라우저에서 렌더링됨
@@ -83,7 +83,7 @@
   .traffic{display:flex;gap:8px}
   .traffic i{width:12px;height:12px;border-radius:50%;display:block}
   .traffic .r{background:var(--tl-r)}.traffic .y{background:var(--tl-y)}.traffic .g{background:var(--tl-g)}
-  .tb-title{flex:1;text-align:center;font-size:.8rem;font-weight:600;color:var(--ink-2);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:52px}
+  .tb-title{flex:1;text-align:center;font-size:.8rem;font-weight:600;color:var(--ink-2);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   .content{
     padding:clamp(1.5rem,4vw,3rem) clamp(1rem,4.5vw,3.25rem) 3.5rem;
@@ -199,6 +199,65 @@
   .ck strong{color:var(--ink)}
 
   footer{margin-top:3rem;padding-top:1.2rem;border-top:.5px solid var(--line);font-size:.79rem;color:var(--ink-3);line-height:1.55}
+
+  /* ── TOC sidebar / off-canvas drawer ─────────────────────────── */
+  .layout{width:100%;max-width:900px;margin:0 auto}
+  .toc-panel{
+    position:fixed;top:0;left:0;height:100vh;width:min(300px,86vw);
+    background:var(--card);border-right:.5px solid var(--line);
+    box-shadow:0 0 40px rgba(0,0,0,.22);
+    transform:translateX(-100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    z-index:50;display:flex;flex-direction:column;overflow:hidden;
+  }
+  html[data-toc="open"] .toc-panel{transform:translateX(0)}
+  .toc-head{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1rem;border-bottom:.5px solid var(--line);flex:0 0 auto}
+  .toc-head .toc-title{font-family:var(--mono);font-size:.68rem;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+  .toc-close{display:flex;width:26px;height:26px;border-radius:7px;border:0;background:var(--panel);color:var(--ink-3);font-size:.9rem;line-height:1;cursor:pointer;align-items:center;justify-content:center}
+  .toc-close:hover{background:var(--line-soft);color:var(--ink)}
+  .toc-list{overflow-y:auto;padding:.55rem;flex:1}
+  .toc-item{margin-bottom:.1rem}
+  .toc-row{display:flex;align-items:center;gap:.3rem}
+  .toc-link{flex:1;min-width:0;display:flex;align-items:center;gap:.55rem;padding:.48rem .55rem;border-radius:9px;font-size:.83rem;color:var(--ink-2);text-decoration:none;line-height:1.32}
+  .toc-link span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .toc-link:hover{background:var(--panel);color:var(--ink)}
+  .toc-link.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+  .toc-num{font-family:var(--mono);font-size:.6rem;font-weight:700;color:#fff;background:var(--ink-3);width:17px;height:17px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .toc-link.active .toc-num{background:var(--accent)}
+  .toc-expand{width:20px;height:20px;flex:0 0 auto;border:0;background:none;color:var(--ink-3);display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;transition:transform .18s}
+  .toc-expand.open{transform:rotate(90deg)}
+  .toc-expand:hover{background:var(--panel)}
+  .toc-expand-spacer{width:20px;flex:0 0 auto}
+  .toc-sub{list-style:none;margin:.05rem 0 .35rem 1.55rem;padding:0;display:none}
+  .toc-sub.open{display:block}
+  .toc-subitem a{display:block;padding:.32rem .55rem;border-radius:7px;font-size:.76rem;color:var(--ink-3);text-decoration:none;line-height:1.3}
+  .toc-subitem a:hover{background:var(--panel);color:var(--ink-2)}
+  .toc-subitem a.active{color:var(--accent-ink);font-weight:600}
+  .toc-backdrop{position:fixed;inset:0;background:rgba(10,14,24,.32);z-index:45;opacity:0;pointer-events:none;transition:opacity .25s}
+  html[data-toc="open"] .toc-backdrop{opacity:1;pointer-events:auto}
+  .toc-btn{flex:0 0 auto;width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:var(--ink-2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,color .15s}
+  .toc-btn:hover{background:var(--panel);color:var(--ink)}
+  .toc-btn:active{transform:scale(.93)}
+  @media (min-width:1181px){
+    .layout{max-width:1200px;display:flex;gap:22px;align-items:flex-start;justify-content:center}
+    .window{flex:1 1 auto;max-width:900px}
+    .toc-panel{
+      position:sticky;top:1.4rem;left:auto;height:auto;max-height:calc(100vh - 2.8rem);
+      width:258px;flex:0 0 258px;transform:none;
+      border-right:0;border:.5px solid var(--line);border-radius:14px;
+      box-shadow:0 10px 30px -10px rgba(20,30,60,.18);
+      transition:opacity .2s ease,flex-basis .2s ease,width .2s ease;
+    }
+    html[data-toc="closed"] .toc-panel{flex:0 0 0;width:0;padding:0;border:0;box-shadow:none;opacity:0;pointer-events:none;overflow:hidden}
+    html[data-toc="closed"] .layout{gap:0}
+    .toc-close,.toc-backdrop{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){.toc-panel,.toc-backdrop,.toc-expand{transition:none}}
+
+  /* ── code block copy button ──────────────────────────────────── */
+  .term-copy{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.64rem;font-weight:600;letter-spacing:.02em;color:var(--term-cmt);background:transparent;border:.5px solid var(--line);border-radius:7px;padding:.26rem .5rem;cursor:pointer;transition:background .15s,color .15s,border-color .15s;position:relative;z-index:2}
+  .term-copy:hover{background:var(--panel);color:var(--ink-2);border-color:var(--ink-3)}
+  .term-copy.copied{color:var(--green);border-color:var(--green)}
+  .term-copy svg{display:block;flex:0 0 auto}
 </style>
 
 <!-- 공유 화살표 마커: 문서에 한 번만. 모든 모식도의 marker-end="url(#ah)"가 이걸 재사용 -->
@@ -207,11 +266,23 @@
 </defs></svg>
 
 <div class="desktop">
+  <div id="tocBackdrop" class="toc-backdrop"></div>
+  <div class="layout">
+  <aside id="tocPanel" class="toc-panel" aria-label="문서 목차">
+    <div class="toc-head">
+      <span class="toc-title">목차</span>
+      <button type="button" class="toc-close" aria-label="목차 닫기">✕</button>
+    </div>
+    <div id="tocList" class="toc-list"></div>
+  </aside>
   <div class="window">
 
     <div class="titlebar">
       <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
       <div class="tb-title">문서 제목 — 부제</div>
+      <button type="button" class="toc-btn" aria-label="목차 토글">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
     </div>
 
     <div class="content">
@@ -258,4 +329,141 @@
 
     </div>
   </div>
+  </div>
 </div>
+
+
+<script>
+(function(){
+  var root=document.documentElement;
+  var mq=window.matchMedia('(min-width:1181px)');
+  var userSet=false;
+  function isOpen(){return root.getAttribute('data-toc')==='open';}
+  function setOpen(v){userSet=true;root.setAttribute('data-toc',v?'open':'closed');}
+  function applyDefault(){if(!userSet)root.setAttribute('data-toc',mq.matches?'open':'closed');}
+  applyDefault();
+  if(mq.addEventListener){mq.addEventListener('change',applyDefault);}else if(mq.addListener){mq.addListener(applyDefault);}
+
+  Array.prototype.forEach.call(document.querySelectorAll('.toc-btn'),function(b){b.addEventListener('click',function(){setOpen(!isOpen());});});
+  Array.prototype.forEach.call(document.querySelectorAll('.toc-close'),function(b){b.addEventListener('click',function(){setOpen(false);});});
+  var backdrop=document.getElementById('tocBackdrop');
+  if(backdrop){backdrop.addEventListener('click',function(){setOpen(false);});}
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!mq.matches&&isOpen()){setOpen(false);}});
+
+  /* ---- build TOC from sections ---- */
+  var list=document.getElementById('tocList');
+  if(list){
+    var sections=Array.prototype.slice.call(document.querySelectorAll('.content > section'));
+    var entries=[];
+    sections.forEach(function(sec,i){
+      var h2=sec.querySelector('h2');
+      if(!h2){return;}
+      if(!sec.id){sec.id='sec-'+(i+1);}
+      var numEl=sec.querySelector('.sec-num');
+      var num=numEl?numEl.textContent.trim():String(i+1);
+      var h3s=Array.prototype.slice.call(sec.querySelectorAll('h3'));
+
+      var item=document.createElement('div');item.className='toc-item';
+      var row=document.createElement('div');row.className='toc-row';
+      var expandBtn=null;
+      if(h3s.length){
+        expandBtn=document.createElement('button');
+        expandBtn.type='button';expandBtn.className='toc-expand';expandBtn.setAttribute('aria-label','하위 항목 펼치기');
+        expandBtn.innerHTML='<svg width="9" height="9" viewBox="0 0 10 10"><path d="M2,1 L8,5 L2,9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+        row.appendChild(expandBtn);
+      }else{
+        var sp=document.createElement('span');sp.className='toc-expand-spacer';row.appendChild(sp);
+      }
+      var a=document.createElement('a');a.className='toc-link';a.href='#'+sec.id;
+      a.innerHTML='<span class="toc-num">'+num+'</span><span>'+h2.textContent.trim()+'</span>';
+      row.appendChild(a);
+      item.appendChild(row);
+      entries.push({a:a,target:sec});
+
+      if(h3s.length){
+        var sub=document.createElement('ul');sub.className='toc-sub';
+        h3s.forEach(function(h3,j){
+          if(!h3.id){h3.id=sec.id+'-'+(j+1);}
+          var li=document.createElement('li');li.className='toc-subitem';
+          var sa=document.createElement('a');sa.href='#'+h3.id;sa.textContent=h3.textContent.trim();
+          li.appendChild(sa);sub.appendChild(li);
+          entries.push({a:sa,target:h3});
+        });
+        item.appendChild(sub);
+        expandBtn.addEventListener('click',function(){
+          var open=sub.classList.toggle('open');
+          expandBtn.classList.toggle('open',open);
+        });
+      }
+      list.appendChild(item);
+    });
+
+    list.addEventListener('click',function(e){
+      var a=e.target.closest?e.target.closest('a'):null;
+      if(!a){return;}
+      e.preventDefault();
+      var id=a.getAttribute('href').slice(1);
+      var target=document.getElementById(id);
+      if(target){target.scrollIntoView({behavior:'smooth',block:'start'});}
+      if(!mq.matches){setOpen(false);}
+    });
+
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(list_){
+        list_.forEach(function(en){
+          var m=null;
+          for(var k=0;k<entries.length;k++){if(entries[k].target===en.target){m=entries[k];break;}}
+          if(!m){return;}
+          if(en.isIntersecting){
+            entries.forEach(function(e){e.a.classList.remove('active');});
+            m.a.classList.add('active');
+            var subUl=m.a.closest('ul.toc-sub');
+            if(subUl && !subUl.classList.contains('open')){
+              subUl.classList.add('open');
+              var prevItem=subUl.parentElement;
+              var btn=prevItem?prevItem.querySelector('.toc-expand'):null;
+              if(btn){btn.classList.add('open');}
+            }
+          }
+        });
+      },{rootMargin:'-15% 0px -70% 0px',threshold:0});
+      sections.forEach(function(s){io.observe(s);});
+    }
+  }
+
+  /* ---- copy buttons for code blocks ---- */
+  function legacyCopy(text){
+    var ta=document.createElement('textarea');
+    ta.value=text;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.top='-9999px';ta.style.left='-9999px';
+    document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,text.length);
+    var ok=false;
+    try{ok=document.execCommand('copy');}catch(e){ok=false;}
+    document.body.removeChild(ta);
+    return ok;
+  }
+  var ICON_COPY='<svg class="i-cp" width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5.2" y="5.2" width="8.3" height="8.3" rx="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M2.7 10.2V3.7A1.5 1.5 0 0 1 4.2 2.2h6" stroke="currentColor" stroke-width="1.3"/></svg><span>복사</span>';
+  var ICON_DONE='<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8.3l3.3 3.3L13 4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>복사됨</span>';
+  Array.prototype.forEach.call(document.querySelectorAll('.termwin'),function(win){
+    var bar=win.querySelector('.termbar');
+    var pre=win.querySelector('pre.term');
+    if(!bar||!pre){return;}
+    var btn=document.createElement('button');
+    btn.type='button';btn.className='term-copy';btn.setAttribute('aria-label','코드 복사');
+    btn.innerHTML=ICON_COPY;
+    bar.appendChild(btn);
+    btn.addEventListener('click',function(){
+      var text=pre.textContent.replace(/\n$/,'');
+      var done=function(){
+        btn.classList.add('copied');
+        btn.innerHTML=ICON_DONE;
+        setTimeout(function(){btn.classList.remove('copied');btn.innerHTML=ICON_COPY;},1600);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+        navigator.clipboard.writeText(text).then(done).catch(function(){legacyCopy(text);done();});
+      }else{
+        legacyCopy(text);done();
+      }
+    });
+  });
+})();
+</script>
