@@ -13,6 +13,7 @@
 - [비교표 (table)](#비교표-table)
 - [체크리스트 (check)](#체크리스트-check)
 - [코드블록 / 터미널 (termwin)](#코드블록--터미널-termwin)
+- [출처 표기 (src / refs)](#출처-표기-src--refs)
 
 ---
 
@@ -190,3 +191,34 @@
 ```
 
 > 한 줄짜리 명령이나 파일명·플래그는 이 무거운 블록 대신 인라인 `<code>…</code>`를 쓴다.
+
+---
+
+## 출처 표기 (src / refs)
+
+근거가 있는 문장 **끝**에 이름표 칩을 붙이고, 마지막 섹션에 출처 목록을 둔다.
+각주 번호는 쓰지 않는다. 칩 색이 근거 등급을 나른다.
+
+```html
+<!-- 본문: 문장 끝, 마침표 앞 -->
+<p>9조 염기쌍을 학습했다<a class="src" href="#ref-nature26">Nature 2026</a>.</p>
+<li>blind spot이 있다<a class="src pre" href="#ref-mathur">bioRxiv Mathur</a></li>
+
+<!-- 출처 섹션: <ol>이 아니라 <ul class="refs">. 태그 라벨은 본문 칩과 동일하게 -->
+<ul class="refs">
+  <li id="ref-nature26"><span class="ref-tag">Nature 2026</span><br><strong>저자. "제목." <em>저널</em> (날짜).</strong>
+    <span class="meta">DOI: <a href="https://doi.org/...">10.xxxx/...</a></span>
+    <span class="meta">인용 — 이 자료에서 실제로 가져온 내용. → 본문 어느 항목의 근거인지</span>
+  </li>
+</ul>
+```
+
+| 클래스 | 색 | 의미 |
+|---|---|---|
+| `.src` / `.ref-tag` | 파랑 | 검증된 1차 자료 |
+| `.src.pre` / `.ref-tag.pre` | 주황 | 미검증 (preprint·블로그·2차 요약) |
+| `.src.doc` / `.ref-tag.doc` | 회색 | 공식 문서·저장소 |
+| `.src.local` / `.ref-tag.local` | 보라 | 내부 자료 |
+
+범례(`.src-legend`), 앵커 연결 규칙, 정직하게 표기하는 법은
+**`references/citations.md`** 에 전부 정리돼 있다.

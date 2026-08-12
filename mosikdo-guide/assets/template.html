@@ -55,7 +55,8 @@
   :root[data-theme="dark"]{--term-bg:#161618;--term-head:#242427;--term-ink:#E9E9EC;--term-cmt:#8A8F98;--term-kw:#6AB7FF;--term-pr:#30D158}
 
   *{box-sizing:border-box}
-  body{margin:0}
+  /* 한글은 어절 단위로만 줄바꿈(단어 중간 끊김 방지). 긴 영문/URL만 예외적으로 끊음 */
+  body{margin:0;word-break:keep-all;overflow-wrap:break-word}
   .desktop{
     min-height:100vh;
     background:radial-gradient(1200px 700px at 12% -10%,var(--desk-3),transparent 60%),linear-gradient(150deg,var(--desk-1),var(--desk-2));
@@ -106,6 +107,46 @@
   strong{font-weight:600}
   .hl{color:var(--accent-ink);font-weight:600}
   code{font-family:var(--mono);font-size:.84em;background:var(--panel);padding:.12em .42em;border-radius:5px;color:var(--accent-ink)}
+
+  /* ── 출처 표기: 인라인 칩(.src) + 출처 목록(.refs) ─────────────
+     각주 번호 대신 문장 옆에 이름표를 붙인다. 색이 근거 등급을 나른다.
+     마크업·규약은 references/citations.md 참고 */
+  .src{
+    display:inline;white-space:nowrap;
+    font-family:var(--mono);font-size:.72em;font-weight:600;letter-spacing:-.01em;
+    color:var(--accent-ink);background:var(--accent-soft);
+    padding:.14em .45em;border-radius:6px;margin-left:.28em;
+    text-decoration:none;border:.5px solid transparent;transition:border-color .15s;
+  }
+  .src:hover{border-color:currentColor}
+  .src::before{content:"↗ ";opacity:.55;font-size:.9em}
+  .src.pre{color:var(--orange);background:var(--orange-soft)}   /* 미검증/잠정 근거 */
+  .src.doc{color:var(--ink-2);background:var(--panel)}          /* 공식 문서 */
+  .src.local{color:var(--purple);background:var(--panel)}       /* 내부 자료 */
+  .pts .src,.ck .src,.ex .src{font-size:.76em}
+
+  .refs{list-style:none;margin:1.1rem 0 0;padding:0}
+  .refs li{
+    padding:.15rem 0 .15rem .9rem;margin-bottom:1.05rem;
+    font-size:.87rem;color:var(--ink-2);line-height:1.6;
+    border-left:2px solid var(--line);scroll-margin-top:80px;
+  }
+  .refs li:target{border-left-color:var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;padding:.6rem .8rem .6rem .9rem}
+  .refs li strong{color:var(--ink)}
+  .refs a{color:var(--accent-ink);text-decoration:none;border-bottom:.5px solid var(--accent-soft);word-break:break-all}
+  .refs a:hover{border-bottom-color:var(--accent-ink)}
+  .refs .meta{display:block;font-size:.78rem;color:var(--ink-3);margin-top:.15rem}
+  .ref-tag{
+    display:inline-block;font-family:var(--mono);font-size:.66rem;font-weight:700;
+    padding:.18rem .5rem;border-radius:6px;margin-bottom:.35rem;
+    color:var(--accent-ink);background:var(--accent-soft);
+  }
+  .ref-tag.pre{color:var(--orange);background:var(--orange-soft)}
+  .ref-tag.doc{color:var(--ink-2);background:var(--panel)}
+  .ref-tag.local{color:var(--purple);background:var(--panel)}
+  .ref-h{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:1.9rem 0 .3rem;font-weight:700}
+  .src-legend{display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0 0}
+  .src-legend span{font-family:var(--mono);font-size:.68rem;font-weight:600;padding:.24rem .55rem;border-radius:7px}
 
   /* macOS terminal-window code block (여러 줄 명령/코드). 마크업: references/components.md 참고 */
   .termwin{margin:1rem 0;border:.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--term-bg);box-shadow:0 1px 2px rgba(20,30,60,.06)}
@@ -321,10 +362,35 @@
           <span class="lbl">용어 정리</span>
           <p><strong>A</strong> = 설명. <strong>B</strong> = 설명.</p>
         </div>
+
+        <p>근거가 있는 문장은 끝에 출처 칩을 붙인다<a class="src" href="#ref-example">저널 2026</a>. 미검증 자료는 주황<a class="src pre" href="#ref-example">preprint</a>, 공식 문서는 회색<a class="src doc" href="#ref-example">공식 문서</a>, 내부 자료는 보라<a class="src local" href="#ref-example">사내 자료</a>로 구분한다.</p>
+      </section>
+
+      <!-- ===== 출처 섹션 예시 (마지막 섹션). 규약은 references/citations.md ===== -->
+      <section>
+        <div class="sec-head"><span class="sec-num">2</span><p class="kicker">References</p></div>
+        <h2>출처</h2>
+
+        <p style="font-size:.9rem;color:var(--ink-2)">본문의 출처 칩을 누르면 해당 항목으로 이동한다. 접근일: <strong>YYYY-MM-DD</strong>.</p>
+
+        <div class="src-legend">
+          <span style="color:var(--accent-ink);background:var(--accent-soft)">파랑 · 검증된 1차 자료</span>
+          <span style="color:var(--orange);background:var(--orange-soft)">주황 · 미검증/잠정</span>
+          <span style="color:var(--ink-2);background:var(--panel)">회색 · 공식 문서</span>
+          <span style="color:var(--purple);background:var(--panel)">보라 · 내부 자료</span>
+        </div>
+
+        <p class="ref-h">분류 소제목</p>
+        <ul class="refs">
+          <li id="ref-example"><span class="ref-tag">저널 2026</span><br><strong>저자. "제목." <em>저널</em> 권(호):쪽 (YYYY-MM-DD).</strong>
+            <span class="meta">DOI: <a href="https://doi.org/...">10.xxxx/xxxxx</a></span>
+            <span class="meta">인용 — 이 자료에서 실제로 가져온 내용을 구체적으로. → 본문 어느 항목의 근거인지</span>
+          </li>
+        </ul>
       </section>
 
       <footer>
-        출처/기준/전제 각주.
+        작성일 · 기준/전제 각주. 근거 등급이 낮은 인용이 있으면 여기서 한 번 더 밝힌다.
       </footer>
 
     </div>
