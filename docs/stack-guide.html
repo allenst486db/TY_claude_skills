@@ -1,0 +1,546 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>TY_claude_skills — 전체 스택 재현 가이드</title>
+<style>
+  :root{
+    --desk-1:#DCE3F0;--desk-2:#C7D2E8;--desk-3:#E7ECF6;
+    --win-solid:#FFFFFF;--bar:rgba(246,246,248,.8);
+    --panel:#F5F5F7;--card:#FFFFFF;
+    --ink:#1D1D1F;--ink-2:#55555A;--ink-3:#86868B;
+    --line:#E3E3E6;--line-soft:#EEEEF0;
+    --accent:#007AFF;--accent-ink:#0060DF;--accent-soft:#E7F0FF;
+    --green:#1EA64A;--green-soft:#E4F6EA;
+    --orange:#C77700;--orange-soft:#FBEEDA;
+    --red:#E0352B;--red-soft:#FCE9E8;
+    --purple:#8E44D0;--cyan:#0AA2C0;--pink:#E0356B;
+    --tl-r:#FF5F57;--tl-y:#FEBC2E;--tl-g:#28C840;
+    --shadow:0 40px 80px -20px rgba(20,30,60,.35),0 12px 32px -8px rgba(20,30,60,.22);
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,"SF Mono","Menlo","Consolas",monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --desk-1:#101318;--desk-2:#05070B;--desk-3:#1A1F27;
+      --win-solid:#1C1C1E;--bar:rgba(40,40,43,.72);
+      --panel:#2C2C2E;--card:#2C2C2E;
+      --ink:#F5F5F7;--ink-2:#B0B0B6;--ink-3:#8A8A8F;
+      --line:#3A3A3C;--line-soft:#323234;
+      --accent:#0A84FF;--accent-ink:#5AB0FF;--accent-soft:#14304F;
+      --green:#30D158;--green-soft:#12331F;
+      --orange:#FF9F0A;--orange-soft:#3A2A10;
+      --red:#FF453A;--red-soft:#3A1A18;
+      --purple:#BF5AF2;--cyan:#5AC8FA;--pink:#FF375F;
+      --shadow:0 40px 90px -20px rgba(0,0,0,.7),0 12px 32px -8px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"]{--desk-1:#DCE3F0;--desk-2:#C7D2E8;--desk-3:#E7ECF6;--win-solid:#FFFFFF;--bar:rgba(246,246,248,.8);--panel:#F5F5F7;--card:#FFFFFF;--ink:#1D1D1F;--ink-2:#55555A;--ink-3:#86868B;--line:#E3E3E6;--line-soft:#EEEEF0;--accent:#007AFF;--accent-ink:#0060DF;--accent-soft:#E7F0FF;--green:#1EA64A;--green-soft:#E4F6EA;--orange:#C77700;--orange-soft:#FBEEDA;--red:#E0352B;--red-soft:#FCE9E8;--purple:#8E44D0;--cyan:#0AA2C0;--pink:#E0356B;--shadow:0 40px 80px -20px rgba(20,30,60,.35),0 12px 32px -8px rgba(20,30,60,.22);}
+  :root[data-theme="dark"]{--desk-1:#101318;--desk-2:#05070B;--desk-3:#1A1F27;--win-solid:#1C1C1E;--bar:rgba(40,40,43,.72);--panel:#2C2C2E;--card:#2C2C2E;--ink:#F5F5F7;--ink-2:#B0B0B6;--ink-3:#8A8A8F;--line:#3A3A3C;--line-soft:#323234;--accent:#0A84FF;--accent-ink:#5AB0FF;--accent-soft:#14304F;--green:#30D158;--green-soft:#12331F;--orange:#FF9F0A;--orange-soft:#3A2A10;--red:#FF453A;--red-soft:#3A1A18;--purple:#BF5AF2;--cyan:#5AC8FA;--pink:#FF375F;--shadow:0 40px 90px -20px rgba(0,0,0,.7),0 12px 32px -8px rgba(0,0,0,.5);}
+
+  :root{--term-bg:#FBFBFD;--term-head:#EDEDF0;--term-ink:#1D1D1F;--term-cmt:#8A8F98;--term-kw:#0060DF;--term-pr:#1EA64A}
+  @media (prefers-color-scheme:dark){:root{--term-bg:#161618;--term-head:#242427;--term-ink:#E9E9EC;--term-cmt:#8A8F98;--term-kw:#6AB7FF;--term-pr:#30D158}}
+  :root[data-theme="light"]{--term-bg:#FBFBFD;--term-head:#EDEDF0;--term-ink:#1D1D1F;--term-cmt:#8A8F98;--term-kw:#0060DF;--term-pr:#1EA64A}
+  :root[data-theme="dark"]{--term-bg:#161618;--term-head:#242427;--term-ink:#E9E9EC;--term-cmt:#8A8F98;--term-kw:#6AB7FF;--term-pr:#30D158}
+
+  *{box-sizing:border-box}
+  body{margin:0}
+  .desktop{
+    min-height:100vh;
+    background:radial-gradient(1200px 700px at 12% -10%,var(--desk-3),transparent 60%),linear-gradient(150deg,var(--desk-1),var(--desk-2));
+    padding:clamp(.75rem,3.5vw,3rem) clamp(.5rem,3vw,2.5rem);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+    display:flex; justify-content:center;
+  }
+  .window{
+    width:100%; max-width:900px;
+    background:var(--win-solid); border-radius:14px;
+    box-shadow:var(--shadow); overflow:hidden;
+    border:.5px solid rgba(255,255,255,.16);
+    animation:winIn .5s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes winIn{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.window{animation:none}}
+
+  .titlebar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; gap:.75rem;
+    padding:.8rem 1.1rem; background:var(--bar);
+    -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:.5px solid var(--line);
+  }
+  .traffic{display:flex;gap:8px}
+  .traffic i{width:12px;height:12px;border-radius:50%;display:block}
+  .traffic .r{background:var(--tl-r)}.traffic .y{background:var(--tl-y)}.traffic .g{background:var(--tl-g)}
+  .tb-title{flex:1;text-align:center;font-size:.8rem;font-weight:600;color:var(--ink-2);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:52px}
+
+  .content{
+    padding:clamp(1.5rem,4vw,3rem) clamp(1rem,4.5vw,3.25rem) 3.5rem;
+    color:var(--ink); font-size:16.5px; line-height:1.72; letter-spacing:-.003em;
+  }
+  .content>*{max-width:46rem;margin-left:auto;margin-right:auto}
+
+  .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 .9rem}
+  h1{font-size:clamp(1.85rem,4.6vw,2.7rem);font-weight:700;line-height:1.12;letter-spacing:-.028em;text-wrap:balance;margin:0 0 1rem}
+  .lede{font-size:1.08rem;color:var(--ink-2);margin:0;text-wrap:pretty}
+
+  section{margin-top:3.5rem}
+  .sec-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.55rem}
+  .sec-num{font-family:var(--mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--accent);width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .kicker{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0}
+  h2{font-size:clamp(1.3rem,2.9vw,1.65rem);font-weight:700;line-height:1.25;letter-spacing:-.02em;text-wrap:balance;margin:0 0 1rem}
+  h3{font-size:1.1rem;font-weight:700;letter-spacing:-.015em;margin:0}
+  p{margin:0 0 1.05rem}
+  p:last-child{margin-bottom:0}
+  strong{font-weight:600}
+  .hl{color:var(--accent-ink);font-weight:600}
+  code{font-family:var(--mono);font-size:.84em;background:var(--panel);padding:.12em .42em;border-radius:5px;color:var(--accent-ink)}
+  a{color:var(--accent-ink)}
+
+  .termwin{margin:1rem 0;border:.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--term-bg);box-shadow:0 1px 2px rgba(20,30,60,.06)}
+  .termbar{position:relative;display:flex;align-items:center;padding:.5rem .8rem;background:var(--term-head);border-bottom:.5px solid var(--line)}
+  .termbar .dots{width:11px;height:11px;border-radius:50%;background:var(--tl-r);box-shadow:16px 0 0 var(--tl-y),32px 0 0 var(--tl-g)}
+  .termbar .tt{position:absolute;left:0;right:0;text-align:center;font-family:var(--mono);font-size:.68rem;font-weight:600;color:var(--term-cmt);letter-spacing:.02em;pointer-events:none}
+  pre.term{margin:0;background:transparent;border:0;border-radius:0;padding:1rem 1.1rem;overflow-x:auto;font-family:var(--mono);font-size:.82rem;line-height:1.75;color:var(--term-ink);white-space:pre}
+  pre.term .c{color:var(--term-cmt)}
+  pre.term .k{color:var(--term-kw);font-weight:600}
+  pre.term .p{color:var(--term-pr)}
+
+  .note{border-radius:14px;padding:1.05rem 1.3rem;margin:1.25rem 0;font-size:.95rem;line-height:1.62}
+  .note .lbl{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;font-weight:600}
+  .note p{margin:0 0 .55rem}.note p:last-child{margin:0}
+  .note.info{background:var(--accent-soft);color:var(--ink-2)} .note.info .lbl{color:var(--accent-ink)} .note.info strong{color:var(--accent-ink)}
+  .note.warn{background:var(--orange-soft);color:var(--ink-2)} .note.warn .lbl{color:var(--orange)} .note.warn strong{color:var(--orange)}
+  .note.danger{background:var(--red-soft);color:var(--ink-2)} .note.danger .lbl{color:var(--red)} .note.danger strong{color:var(--red)}
+  .note.ok{background:var(--green-soft);color:var(--ink-2)} .note.ok .lbl{color:var(--green)} .note.ok strong{color:var(--green)}
+  .note.plain{background:var(--panel);color:var(--ink-2)} .note.plain .lbl{color:var(--ink-3)} .note.plain strong{color:var(--ink)}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin:1.25rem 0}
+  .cd{background:var(--panel);border-radius:13px;padding:.9rem 1.05rem}
+  .cd .t{font-size:.86rem;font-weight:700;margin-bottom:.2rem;letter-spacing:-.01em}
+  .cd .d{font-size:.8rem;color:var(--ink-3);line-height:1.5}
+
+  figure{margin:1.5rem 0;padding:1.25rem;background:var(--card);border:.5px solid var(--line);border-radius:16px}
+  .fig-scroll{overflow-x:auto}
+  .fig-scroll svg{display:block;width:100%;min-width:640px;height:auto}
+  .dg text{font-family:var(--sans)}
+  .dg .ttl{font-size:12.5px;font-weight:700;fill:var(--ink)}
+  .dg .lbl{font-size:11px;font-weight:600;fill:var(--ink-2)}
+  .dg .cap{font-size:9.5px;fill:var(--ink-3)}
+  .dg .nd{fill:var(--panel);stroke:var(--line)}
+  .dg .nd-a{fill:var(--card);stroke:var(--accent);stroke-width:1.5}
+  .dg .ar{stroke:var(--ink-3);stroke-width:1.5;fill:none;marker-end:url(#ah)}
+  .dg .ar-d{stroke:var(--ink-3);stroke-width:1.4;fill:none;stroke-dasharray:4 4;marker-end:url(#ah)}
+  figcaption{margin-top:.9rem;font-size:.83rem;color:var(--ink-3);text-align:center;line-height:1.5}
+  .scroll-hint{display:none;font-size:.72rem;color:var(--ink-3);text-align:right;margin-bottom:.4rem;font-family:var(--mono)}
+  @media (max-width:680px){.scroll-hint{display:block}}
+
+  .method{background:var(--card);border:.5px solid var(--line);border-radius:16px;padding:1.5rem 1.5rem;margin:1.1rem 0}
+  .m-head{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:.45rem}
+  .m-badge{font-family:var(--mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--accent);padding:.2rem .55rem;border-radius:7px}
+  .m-badge.alt{background:var(--ink-3)}
+  .m-pill{font-size:.7rem;font-weight:600;padding:.18rem .58rem;border-radius:999px}
+  .m-pill.ok{background:var(--green-soft);color:var(--green)}
+  .m-pill.warn{background:var(--orange-soft);color:var(--orange)}
+  .m-pill.no{background:var(--red-soft);color:var(--red)}
+  .m-desc{color:var(--ink-2);margin:.4rem 0 1.1rem;font-size:.96rem}
+
+  .pts{list-style:none;margin:0;padding:0}
+  .pts li{position:relative;padding-left:1.3rem;margin-bottom:.55rem;font-size:.94rem;color:var(--ink-2);line-height:1.6}
+  .pts li:last-child{margin-bottom:0}
+  .pts li::before{content:"";position:absolute;left:.15rem;top:.66em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+  .pts li.warn::before{background:var(--orange)}
+  .pts li.no::before{background:var(--red)}
+  .pts li strong{color:var(--ink)}
+
+  .sub-h{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:1.35rem 0 .6rem;font-weight:600}
+
+  .ex{display:flex;gap:.7rem;align-items:flex-start;background:var(--panel);border-radius:11px;padding:.7rem .9rem;margin-bottom:.5rem;font-size:.88rem;color:var(--ink-2);line-height:1.55}
+  .ex:last-child{margin-bottom:0}
+  .ex .n{font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);padding:.12rem .45rem;border-radius:5px;flex:0 0 auto;margin-top:.12rem}
+  .ex.bad .n{color:var(--red);background:var(--red-soft)}
+  .ex strong{color:var(--ink)}
+
+  .table-wrap{overflow-x:auto;margin-top:1.25rem;border:.5px solid var(--line);border-radius:16px}
+  table{border-collapse:collapse;width:100%;min-width:560px;font-size:.88rem;background:var(--card)}
+  th,td{text-align:left;padding:.8rem 1rem;vertical-align:top}
+  thead th{font-size:.74rem;font-weight:700;color:var(--ink);background:var(--panel);border-bottom:.5px solid var(--line)}
+  thead th .sub{display:block;font-family:var(--mono);font-size:.62rem;font-weight:500;color:var(--ink-3);letter-spacing:.03em;margin-top:.12rem}
+  tbody th{font-weight:600;color:var(--ink-2);white-space:nowrap;font-size:.8rem}
+  tbody td{color:var(--ink-2)}
+  tbody tr{border-top:.5px solid var(--line-soft)}
+  .yes{color:var(--green);font-weight:600}
+  .no-c{color:var(--red);font-weight:600}
+  .par{color:var(--orange);font-weight:600}
+
+  .check{background:var(--card);border:.5px solid var(--line);border-radius:16px;overflow:hidden;margin-top:1.25rem}
+  .ck{display:flex;gap:.75rem;align-items:flex-start;padding:.9rem 1.1rem;border-top:.5px solid var(--line-soft);font-size:.92rem;color:var(--ink-2);line-height:1.55}
+  .ck:first-child{border-top:0}
+  .ck .box{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--accent);flex:0 0 auto;margin-top:.22rem;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:.62rem;font-weight:700}
+  .ck strong{color:var(--ink)}
+
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:.5px solid var(--line);font-size:.79rem;color:var(--ink-3);line-height:1.55}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="ah" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto"><path d="M0,1 L8,4.5 L0,8 Z" fill="var(--ink-3)"/></marker>
+</defs></svg>
+
+<div class="desktop">
+  <div class="window">
+
+    <div class="titlebar">
+      <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+      <div class="tb-title">TY_claude_skills — 전체 스택 재현 가이드</div>
+    </div>
+
+    <div class="content">
+
+      <header>
+        <p class="eyebrow">Stack Guide · 2026-07-25</p>
+        <h1>PC 한 대의 Claude Code 환경을 통째로 옮기기</h1>
+        <p class="lede">스킬 21종 · 플러그인 6종 · MCP 서버 2종. 이 리포 하나를 clone 하고 명령 한 줄이면
+        새 PC가 같은 환경이 됩니다. <strong>기존에 있던 것은 지우지도, 조용히 덮어쓰지도 않습니다.</strong></p>
+      </header>
+
+      <!-- ============================ 1 ============================ -->
+      <section>
+        <div class="sec-head"><span class="sec-num">1</span><p class="kicker">Architecture</p></div>
+        <h2>리포에 무엇이 들어 있나</h2>
+        <p>스킬을 전부 리포에 복사해 두지 않습니다. <span class="hl">직접 만든 것만 담고</span>,
+        남의 저장소에서 온 것은 <span class="hl">"어디서 가져올지"만 기록</span>합니다.
+        그래야 원본이 업데이트돼도 따라갈 수 있고, 남의 코드를 재배포하지도 않습니다.</p>
+
+        <figure>
+          <p class="scroll-hint">← 좌우 스크롤</p>
+          <div class="fig-scroll">
+            <svg class="dg" viewBox="0 0 700 224" role="img" aria-label="리포의 세 구성요소가 install.mjs 를 거쳐 스킬 플러그인 MCP 로 재현되는 구조">
+              <rect x="16" y="26" width="190" height="170" rx="14" fill="var(--accent-soft)" stroke="none"/>
+              <text x="32" y="50" class="ttl" fill="var(--accent-ink)">TY_claude_skills</text>
+              <rect x="32" y="62" width="158" height="34" rx="8" fill="var(--card)"/>
+              <text x="44" y="83" class="lbl">직접 만든 스킬 1종</text>
+              <rect x="32" y="104" width="158" height="34" rx="8" fill="var(--card)"/>
+              <text x="44" y="125" class="lbl">setup/ 매니페스트</text>
+              <rect x="32" y="146" width="158" height="34" rx="8" fill="var(--card)"/>
+              <text x="44" y="167" class="lbl">docs/ 가이드</text>
+
+              <line x1="208" y1="112" x2="260" y2="112" class="ar"/>
+
+              <rect x="264" y="88" width="140" height="48" rx="12" class="nd-a"/>
+              <text x="334" y="110" class="ttl" fill="var(--accent-ink)" text-anchor="middle">install.mjs</text>
+              <text x="334" y="126" class="cap" text-anchor="middle">매니페스트대로 실행</text>
+
+              <line x1="406" y1="100" x2="466" y2="62" class="ar"/>
+              <line x1="406" y1="112" x2="466" y2="122" class="ar"/>
+              <line x1="406" y1="124" x2="466" y2="184" class="ar"/>
+
+              <rect x="470" y="36" width="214" height="48" rx="12" fill="var(--green-soft)" stroke="none"/>
+              <text x="577" y="58" class="ttl" fill="var(--green)" text-anchor="middle">~/.claude/skills</text>
+              <text x="577" y="74" class="cap" text-anchor="middle">스킬 21종</text>
+
+              <rect x="470" y="98" width="214" height="48" rx="12" fill="var(--green-soft)" stroke="none"/>
+              <text x="577" y="120" class="ttl" fill="var(--green)" text-anchor="middle">플러그인 6종</text>
+              <text x="577" y="136" class="cap" text-anchor="middle">마켓플레이스 6곳</text>
+
+              <rect x="470" y="160" width="214" height="48" rx="12" fill="var(--green-soft)" stroke="none"/>
+              <text x="577" y="182" class="ttl" fill="var(--green)" text-anchor="middle">MCP 서버 2종</text>
+              <text x="577" y="198" class="cap" text-anchor="middle">user 스코프</text>
+            </svg>
+          </div>
+          <figcaption>리포는 <strong>설계도</strong>고, <code>install.mjs</code>가 그대로 시공한다.
+          스킬 본체를 전부 짊어지지 않는다.</figcaption>
+        </figure>
+
+        <div class="cards">
+          <div class="cd"><div class="t">vendoredSkills</div><div class="d">리포에 직접 담긴 자체 제작 스킬. clone 만으로 사용 가능</div></div>
+          <div class="cd"><div class="t">externalSkills</div><div class="d">출처 저장소·경로·고정 커밋만 기록. 설치 때 받아온다</div></div>
+          <div class="cd"><div class="t">plugins · mcpServers</div><div class="d"><code>claude</code> CLI 명령으로 등록</div></div>
+          <div class="cd"><div class="t">localOnlySkills</div><div class="d">동기화하지 않기로 한 스킬. 기록만 하고 설치는 하지 않는다</div></div>
+        </div>
+
+        <div class="note plain">
+          <span class="lbl">동기화하지 않는 스킬</span>
+          <p>공개하고 싶지 않은 스킬은 <code>localOnlySkills</code> 에 이름만 남겨 둡니다.
+          설치 스크립트가 건드리지 않으므로 <strong>PC 마다 수동으로 옮겨야</strong> 합니다.
+          "왜 이 PC엔 이 스킬이 없지?" 를 나중에 추적할 수 있게 하려는 기록입니다.</p>
+        </div>
+      </section>
+
+      <!-- ============================ 2 ============================ -->
+      <section>
+        <div class="sec-head"><span class="sec-num">2</span><p class="kicker">Quick Start</p></div>
+        <h2>새 PC에서 30초</h2>
+
+        <div class="termwin">
+          <div class="termbar"><span class="dots"></span><span class="tt">새 PC — Terminal</span></div>
+          <pre class="term"><span class="c"># 1) 리포를 skills 디렉터리로 그대로 clone (가장 간단)</span>
+<span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git ~/.claude/skills
+
+<span class="c"># 2) 나머지 전부 재현 — 먼저 무엇을 할지만 확인</span>
+<span class="k">node</span> ~/.claude/skills/setup/install.mjs --dry-run
+
+<span class="c"># 3) 실제 실행</span>
+<span class="k">node</span> ~/.claude/skills/setup/install.mjs</pre>
+        </div>
+
+        <div class="note info">
+          <span class="lbl">Windows</span>
+          <p><code>~/.claude/skills</code> 자리에 <code>"$env:USERPROFILE\.claude\skills"</code>를 쓰고,
+          실행은 <code>pwsh -File setup\install.ps1</code> 로 하면 됩니다. 내부적으로 같은
+          <code>install.mjs</code>를 부릅니다.</p>
+        </div>
+
+        <p class="sub-h">이미 로컬 스킬이 있는 PC라면</p>
+        <p>skills 디렉터리를 통째로 clone 할 수 없습니다. 리포를 아무 데나 받아서 설치 스크립트만 돌리세요.
+        스크립트가 기존 스킬을 <strong>건드리지 않고</strong> 없는 것만 채웁니다.</p>
+
+        <div class="termwin">
+          <div class="termbar"><span class="dots"></span><span class="tt">기존 스킬이 있는 PC — Terminal</span></div>
+          <pre class="term"><span class="k">git clone</span> https://github.com/allenst486db/TY_claude_skills.git ~/ty-skills
+<span class="k">node</span> ~/ty-skills/setup/install.mjs --dry-run   <span class="c"># 먼저 확인</span>
+<span class="k">node</span> ~/ty-skills/setup/install.mjs</pre>
+        </div>
+
+        <p class="sub-h">부분 실행</p>
+        <ul class="pts">
+          <li><code>--skills</code> · <code>--plugins</code> · <code>--mcp</code> — 원하는 단계만</li>
+          <li><code>--dry-run</code> — 아무것도 바꾸지 않고 계획만 출력</li>
+          <li><code>--latest</code> — 고정 커밋 무시하고 각 저장소 최신으로 (3절 참고)</li>
+        </ul>
+      </section>
+
+      <!-- ============================ 3 ============================ -->
+      <section>
+        <div class="sec-head"><span class="sec-num">3</span><p class="kicker">Safety Policy</p></div>
+        <h2>기존 것을 잃지 않는 규칙</h2>
+        <p>설치 스크립트는 스킬 폴더마다 아래 판정을 거칩니다.
+        <strong>파일을 지우는 경로가 아예 없습니다</strong> — 교체할 때도 기존 폴더는 이름만 바꿔 남깁니다.</p>
+
+        <figure>
+          <p class="scroll-hint">← 좌우 스크롤</p>
+          <div class="fig-scroll">
+            <svg class="dg" viewBox="0 0 700 250" role="img" aria-label="스킬 폴더가 없으면 설치, 같으면 건너뜀, 다르면 백업 후 업데이트하는 판정 흐름">
+              <rect x="260" y="14" width="180" height="44" rx="12" class="nd-a"/>
+              <text x="350" y="42" class="ttl" fill="var(--accent-ink)" text-anchor="middle">이미 있는가?</text>
+
+              <line x1="258" y1="36" x2="190" y2="36" class="ar"/>
+              <text x="224" y="28" class="cap" text-anchor="middle">아니오</text>
+              <rect x="16" y="14" width="170" height="44" rx="12" fill="var(--green-soft)" stroke="none"/>
+              <text x="101" y="42" class="ttl" fill="var(--green)" text-anchor="middle">＋ 설치</text>
+
+              <line x1="442" y1="36" x2="510" y2="36" class="ar-d"/>
+              <text x="476" y="28" class="cap" text-anchor="middle">심볼릭 링크면</text>
+              <rect x="514" y="14" width="170" height="44" rx="12" fill="var(--panel)" stroke="var(--line)" stroke-dasharray="4 4"/>
+              <text x="599" y="41" class="lbl" fill="var(--ink-3)" text-anchor="middle">건너뜀 · 타 도구 관리</text>
+
+              <line x1="350" y1="58" x2="350" y2="92" class="ar"/>
+              <text x="374" y="80" class="cap">예</text>
+
+              <rect x="260" y="96" width="180" height="44" rx="12" class="nd-a"/>
+              <text x="350" y="124" class="ttl" fill="var(--accent-ink)" text-anchor="middle">내용이 같은가?</text>
+
+              <line x1="258" y1="118" x2="190" y2="118" class="ar"/>
+              <text x="224" y="110" class="cap" text-anchor="middle">예</text>
+              <rect x="16" y="96" width="170" height="44" rx="12" fill="var(--panel)" stroke="none"/>
+              <text x="101" y="123" class="ttl" fill="var(--ink-3)" text-anchor="middle">· 건너뜀</text>
+
+              <line x1="350" y1="140" x2="350" y2="176" class="ar"/>
+              <text x="374" y="164" class="cap">아니오</text>
+              <rect x="230" y="180" width="240" height="56" rx="12" fill="var(--orange-soft)" stroke="none"/>
+              <text x="350" y="204" class="ttl" fill="var(--orange)" text-anchor="middle">↑ 백업 후 업데이트</text>
+              <text x="350" y="222" class="cap" text-anchor="middle">기존 폴더는 이름.bak-타임스탬프 로 보존</text>
+            </svg>
+          </div>
+          <figcaption>같은 내용이면 아무 일도 하지 않는다. 다를 때만 움직이고, 그때도 <strong>기존 폴더는 살려둔다.</strong></figcaption>
+        </figure>
+
+        <div class="note ok">
+          <span class="lbl">판정 기준</span>
+          <p>"같다"는 눈대중이 아니라 <strong>폴더 전체의 SHA-256</strong>입니다. 모든 파일의 상대경로와
+          내용을 정렬해 해싱하므로, 파일 하나만 달라도 업데이트로 잡힙니다.</p>
+        </div>
+
+        <div class="note warn">
+          <span class="lbl">백업은 자동으로 지워지지 않습니다</span>
+          <p>업데이트가 일어나면 <code>&lt;이름&gt;.bak-202607251530</code> 같은 폴더가 남습니다.
+          실행 끝에 목록이 출력되니, 내용을 확인한 뒤 직접 지우세요.</p>
+        </div>
+      </section>
+
+      <!-- ============================ 4 ============================ -->
+      <section>
+        <div class="sec-head"><span class="sec-num">4</span><p class="kicker">Pinning</p></div>
+        <h2>왜 커밋을 고정하나</h2>
+        <p>외부 스킬을 <code>latest</code>로 받으면 <span class="hl">설치한 날짜에 따라 PC마다 다른 버전</span>이
+        깔립니다. 그러면 "내 PC에서는 되는데" 문제가 생깁니다. 그래서 매니페스트에
+        저장소별 커밋 SHA를 박아두고 그 시점을 받습니다.</p>
+
+        <figure>
+          <p class="scroll-hint">← 좌우 스크롤</p>
+          <div class="fig-scroll">
+            <svg class="dg" viewBox="0 0 700 200" role="img" aria-label="커밋을 고정하면 모든 PC가 같은 버전을 받고 고정하지 않으면 PC마다 달라지는 비교">
+              <rect x="16" y="20" width="326" height="160" rx="14" fill="var(--green-soft)" stroke="none"/>
+              <text x="36" y="46" class="ttl" fill="var(--green)">고정 커밋 — 기본값</text>
+              <text x="36" y="63" class="cap">pinnedCommits 에 SHA 기록</text>
+              <rect x="36" y="76" width="88" height="38" rx="8" fill="var(--card)"/>
+              <text x="80" y="94" class="lbl" text-anchor="middle">PC A</text>
+              <text x="80" y="108" class="cap" text-anchor="middle">22d9b75</text>
+              <rect x="132" y="76" width="88" height="38" rx="8" fill="var(--card)"/>
+              <text x="176" y="94" class="lbl" text-anchor="middle">PC B</text>
+              <text x="176" y="108" class="cap" text-anchor="middle">22d9b75</text>
+              <rect x="228" y="76" width="88" height="38" rx="8" fill="var(--card)"/>
+              <text x="272" y="94" class="lbl" text-anchor="middle">PC C</text>
+              <text x="272" y="108" class="cap" text-anchor="middle">22d9b75</text>
+              <text x="36" y="152" font-size="11" font-weight="700" fill="var(--green)">✓ 세 대가 완전히 같은 동작</text>
+
+              <rect x="358" y="20" width="326" height="160" rx="14" fill="var(--orange-soft)" stroke="none"/>
+              <text x="378" y="46" class="ttl" fill="var(--orange)">고정 없이 latest</text>
+              <text x="378" y="63" class="cap">설치한 날짜대로 제각각</text>
+              <rect x="378" y="76" width="88" height="38" rx="8" fill="var(--card)"/>
+              <text x="422" y="94" class="lbl" text-anchor="middle">PC A</text>
+              <text x="422" y="108" class="cap" text-anchor="middle">22d9b75</text>
+              <rect x="474" y="76" width="88" height="38" rx="8" fill="var(--card)"/>
+              <text x="518" y="94" class="lbl" text-anchor="middle">PC B</text>
+              <text x="518" y="108" class="cap" text-anchor="middle">a41c9e0</text>
+              <rect x="570" y="76" width="88" height="38" rx="8" fill="var(--card)"/>
+              <text x="614" y="94" class="lbl" text-anchor="middle">PC C</text>
+              <text x="614" y="108" class="cap" text-anchor="middle">7f2b118</text>
+              <text x="378" y="152" font-size="11" font-weight="700" fill="var(--orange)">재현 불가 · 원인 추적이 어려워짐</text>
+            </svg>
+          </div>
+          <figcaption>고정이 곧 <strong>"다른 PC에서도 동일하게"</strong>의 실체다. 업데이트는 의도적으로만 한다.</figcaption>
+        </figure>
+
+        <p class="sub-h">최신으로 올리는 절차</p>
+        <div class="check">
+          <div class="ck"><span class="box">1</span><div><code>node setup/install.mjs --latest --dry-run</code> — 무엇이 바뀌는지 확인</div></div>
+          <div class="ck"><span class="box">2</span><div><code>node setup/install.mjs --latest</code> — 실제 적용. 기존 폴더는 <code>.bak-</code>으로 남습니다</div></div>
+          <div class="ck"><span class="box">3</span><div>Claude Code를 재시작하고 <strong>실제로 잘 도는지 확인</strong></div></div>
+          <div class="ck"><span class="box">4</span><div><code>setup/claude-stack.json</code>의 <code>pinnedCommits</code>를 새 SHA로 갱신하고 커밋·push</div></div>
+        </div>
+
+        <div class="termwin">
+          <div class="termbar"><span class="dots"></span><span class="tt">새 SHA 확인 — Terminal</span></div>
+          <pre class="term"><span class="k">git ls-remote</span> https://github.com/heygen-com/hyperframes.git HEAD</pre>
+        </div>
+      </section>
+
+      <!-- ============================ 5 ============================ -->
+      <section>
+        <div class="sec-head"><span class="sec-num">5</span><p class="kicker">Inventory</p></div>
+        <h2>수록 내용</h2>
+
+        <p class="sub-h">스킬 — 이 리포에 담긴 것</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>스킬</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><th>mosikdo-guide</th><td>macOS 스타일 HTML 가이드 + 인라인 SVG 모식도 디자인 시스템</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="sub-h">스킬 — 외부 저장소에서 설치</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>출처</th><th>스킬<span class="sub">skills</span></th></tr></thead>
+            <tbody>
+              <tr><th>coreyhaines31/marketingskills</th><td>copywriting · cro</td></tr>
+              <tr><th>vercel-labs/skills</th><td>find-skills</td></tr>
+              <tr><th>kyungseo/skillstead</th><td>docs-claim-check · github-release-guide · svg-infographic · writing-quality-editor</td></tr>
+              <tr><th>199-biotechnologies/…</th><td>deep-research</td></tr>
+              <tr><th>heygen-com/hyperframes</th><td>hyperframes · hyperframes-cli · hyperframes-core · hyperframes-creative · hyperframes-registry · embedded-captions · media-use · motion-graphics · music-to-video · product-launch-video · remotion-to-hyperframes · talking-head-recut</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="sub-h">플러그인</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>플러그인</th><th>용도</th></tr></thead>
+            <tbody>
+              <tr><th>superpowers</th><td>브레인스토밍·체계적 디버깅 등 프로세스 스킬</td></tr>
+              <tr><th>claude-mem</th><td>세션 간 영속 메모리·검색</td></tr>
+              <tr><th>ui-ux-pro-max</th><td>UI/UX 디자인, 디자인 시스템, 배너, 슬라이드</td></tr>
+              <tr><th>andrej-karpathy-skills</th><td>LLM 코딩 실수를 줄이는 4대 원칙</td></tr>
+              <tr><th>caveman</th><td>출력 토큰 압축 — <span class="par">기본 OFF</span>, <code>/caveman</code>으로만 진입</td></tr>
+              <tr><th>handoff</th><td>세션 간 컨텍스트 인수인계</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="sub-h">MCP 서버</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>서버</th><th>용도</th><th>비고</th></tr></thead>
+            <tbody>
+              <tr><th>ruflo</th><td>멀티 에이전트 오케스트레이션 (210여 개 도구)</td><td class="no-c">init 실행 금지</td></tr>
+              <tr><th>notebooklm</th><td>NotebookLM 노트북 기반 인용 답변</td><td class="par">PC당 로그인 1회</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note danger">
+          <span class="lbl">ruflo 주의</span>
+          <p><code>npx ruflo init</code>은 실행한 폴더의 <code>CLAUDE.md</code>·<code>.claude/</code>를
+          덮어씁니다. 이 스택은 <strong>MCP 서버 등록만</strong> 합니다. init 이 필요하면 반드시 빈 하위 폴더에서 하세요.</p>
+        </div>
+      </section>
+
+      <!-- ============================ 6 ============================ -->
+      <section>
+        <div class="sec-head"><span class="sec-num">6</span><p class="kicker">Manual Steps</p></div>
+        <h2>스크립트가 못 하는 것</h2>
+        <p>계정·브라우저에 묶인 것은 파일로 옮길 수 없습니다. PC마다 한 번씩 손이 필요합니다.</p>
+
+        <ul class="pts">
+          <li class="warn"><strong>NotebookLM 인증</strong> — 대화형 <code>claude</code> 세션에서 <code>setup_auth</code>
+          실행 → Chrome 창에서 Google 로그인. 쿠키가 저장돼 이후 재인증이 없습니다</li>
+          <li><strong>claude.ai 커넥터</strong> — Notion · Figma · Gamma · Lovable · Canva · PubMed 등은
+          계정 단위라 로그인하면 자동으로 따라옵니다. 설정할 것이 없습니다</li>
+          <li class="warn"><strong>Claude Code 재시작</strong> — 새 스킬·플러그인은 재시작해야 로드됩니다</li>
+        </ul>
+
+        <div class="note plain">
+          <span class="lbl">선택 사항</span>
+          <p>deep-research의 권한 프롬프트를 줄이려면 <code>~/.claude/settings.json</code>의
+          <code>permissions.allow</code>에 <code>WebSearch</code>·<code>Glob</code>·<code>Grep</code>·<code>Read</code>를
+          추가합니다. <code>WebFetch</code>까지 넣으면 임의 URL 접근이 무확인 허용되니 판단해서 넣으세요.
+          이 스택은 <strong>넣지 않은 상태</strong>입니다.</p>
+        </div>
+      </section>
+
+      <!-- ============================ 7 ============================ -->
+      <section>
+        <div class="sec-head"><span class="sec-num">7</span><p class="kicker">Maintenance</p></div>
+        <h2>스택에 새로 추가하기</h2>
+
+        <p class="sub-h">직접 만든 스킬을 넣을 때</p>
+        <div class="termwin">
+          <div class="termbar"><span class="dots"></span><span class="tt">~/.claude/skills — Terminal</span></div>
+          <pre class="term"><span class="c"># 1) 스킬 폴더를 리포에 만든다 (폴더명 = SKILL.md 의 name)</span>
+<span class="c"># 2) setup/claude-stack.json 의 vendoredSkills 에 한 줄 추가</span>
+<span class="c"># 3) 커밋 · push</span>
+<span class="k">git add</span> -A &amp;&amp; <span class="k">git commit</span> -m "add: &lt;스킬명&gt;" &amp;&amp; <span class="k">git push</span></pre>
+        </div>
+
+        <p class="sub-h">남의 스킬을 스택에 편입할 때</p>
+        <p><code>externalSkills</code>에 <code>name</code>·<code>repo</code>·<code>path</code>를 적고,
+        <code>pinnedCommits</code>에 그 저장소의 SHA를 추가합니다. 리포에 파일을 복사하지 않습니다.</p>
+
+        <div class="check">
+          <div class="ck"><span class="box">✓</span><div><strong>작업 전 <code>git pull</code></strong> — 다른 PC에서 올린 변경을 먼저 받습니다</div></div>
+          <div class="ck"><span class="box">✓</span><div><strong>폴더명 = 스킬명</strong> — <code>SKILL.md</code>의 <code>name</code>과 폴더 이름을 맞춥니다</div></div>
+          <div class="ck"><span class="box">✓</span><div><strong>description에 "언제 쓰는지"</strong> — 발동 조건이 구체적이어야 스킬이 트리거됩니다</div></div>
+          <div class="ck"><span class="box">✓</span><div><strong>추가 후 <code>--dry-run</code></strong> — 매니페스트가 실제로 맞는지 확인하고 push 합니다</div></div>
+        </div>
+      </section>
+
+      <footer>
+        리포: <a href="https://github.com/allenst486db/TY_claude_skills">github.com/allenst486db/TY_claude_skills</a> ·
+        기계가 읽는 명세: <code>setup/claude-stack.json</code> ·
+        스킬 동기화 절차는 <a href="./guide.html">동기화 가이드</a> 참고<br>
+        이 문서는 <code>mosikdo-guide</code> 스킬의 디자인 시스템으로 작성되었습니다.
+      </footer>
+
+    </div>
+  </div>
+</div>
