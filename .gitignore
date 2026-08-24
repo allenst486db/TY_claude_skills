@@ -1,0 +1,31 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.swp
+*~
+
+# externally-sourced skills managed by setup/install.mjs — not vendored here
+/copywriting/
+/cro/
+/find-skills/
+/docs-claim-check/
+/github-release-guide/
+/svg-infographic/
+/writing-quality-editor/
+/deep-research/
+/embedded-captions/
+/hyperframes/
+/hyperframes-cli/
+/hyperframes-core/
+/hyperframes-creative/
+/hyperframes-registry/
+/media-use/
+/motion-graphics/
+/music-to-video/
+/product-launch-video/
+/remotion-to-hyperframes/
+/talking-head-recut/

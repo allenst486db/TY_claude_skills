@@ -1,0 +1,938 @@
+﻿<title>De novo 전사체 분석 가이드 — 분석 방향 및 Assembly Group 설정</title>
+<style>
+  :root {
+    --desk-1:#DCE3F0; --desk-2:#C7D2E8; --desk-3:#E7ECF6;
+    --win-solid:#FFFFFF; --bar:rgba(246,246,248,.8);
+    --panel:#F5F5F7; --card:#FFFFFF;
+    --ink:#1D1D1F; --ink-2:#55555A; --ink-3:#86868B;
+    --line:#E3E3E6; --line-soft:#EEEEF0;
+    --accent:#007AFF; --accent-ink:#0060DF; --accent-soft:#E7F0FF;
+    --green:#1EA64A; --green-soft:#E4F6EA;
+    --orange:#C77700; --orange-soft:#FBEEDA;
+    --red:#E0352B; --red-soft:#FCE9E8;
+    --purple:#8E44D0; --cyan:#0AA2C0; --pink:#E0356B;
+    --tl-r:#FF5F57; --tl-y:#FEBC2E; --tl-g:#28C840;
+    --shadow:0 40px 80px -20px rgba(20,30,60,.35),0 12px 32px -8px rgba(20,30,60,.22);
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    --mono:ui-monospace,"SF Mono","Menlo","Consolas",monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --desk-1:#101318; --desk-2:#05070B; --desk-3:#1A1F27;
+      --win-solid:#1C1C1E; --bar:rgba(40,40,43,.72);
+      --panel:#2C2C2E; --card:#2C2C2E;
+      --ink:#F5F5F7; --ink-2:#B0B0B6; --ink-3:#8A8A8F;
+      --line:#3A3A3C; --line-soft:#323234;
+      --accent:#0A84FF; --accent-ink:#5AB0FF; --accent-soft:#14304F;
+      --green:#30D158; --green-soft:#12331F;
+      --orange:#FF9F0A; --orange-soft:#3A2A10;
+      --red:#FF453A; --red-soft:#3A1A18;
+      --purple:#BF5AF2; --cyan:#5AC8FA; --pink:#FF375F;
+      --shadow:0 40px 90px -20px rgba(0,0,0,.7),0 12px 32px -8px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"]{--desk-1:#DCE3F0;--desk-2:#C7D2E8;--desk-3:#E7ECF6;--win-solid:#FFFFFF;--bar:rgba(246,246,248,.8);--panel:#F5F5F7;--card:#FFFFFF;--ink:#1D1D1F;--ink-2:#55555A;--ink-3:#86868B;--line:#E3E3E6;--line-soft:#EEEEF0;--accent:#007AFF;--accent-ink:#0060DF;--accent-soft:#E7F0FF;--green:#1EA64A;--green-soft:#E4F6EA;--orange:#C77700;--orange-soft:#FBEEDA;--red:#E0352B;--red-soft:#FCE9E8;--purple:#8E44D0;--cyan:#0AA2C0;--pink:#E0356B;--shadow:0 40px 80px -20px rgba(20,30,60,.35),0 12px 32px -8px rgba(20,30,60,.22);}
+  :root[data-theme="dark"]{--desk-1:#101318;--desk-2:#05070B;--desk-3:#1A1F27;--win-solid:#1C1C1E;--bar:rgba(40,40,43,.72);--panel:#2C2C2E;--card:#2C2C2E;--ink:#F5F5F7;--ink-2:#B0B0B6;--ink-3:#8A8A8F;--line:#3A3A3C;--line-soft:#323234;--accent:#0A84FF;--accent-ink:#5AB0FF;--accent-soft:#14304F;--green:#30D158;--green-soft:#12331F;--orange:#FF9F0A;--orange-soft:#3A2A10;--red:#FF453A;--red-soft:#3A1A18;--purple:#BF5AF2;--cyan:#5AC8FA;--pink:#FF375F;--shadow:0 40px 90px -20px rgba(0,0,0,.7),0 12px 32px -8px rgba(0,0,0,.5);}
+
+  *{box-sizing:border-box}
+  body{margin:0;word-break:keep-all;overflow-wrap:break-word}
+  .desktop{
+    min-height:100vh;
+    background:radial-gradient(1200px 700px at 12% -10%,var(--desk-3),transparent 60%),linear-gradient(150deg,var(--desk-1),var(--desk-2));
+    padding:clamp(.75rem,3.5vw,3rem) clamp(.5rem,3vw,2.5rem);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+    display:flex; justify-content:center;
+  }
+  .window{
+    width:100%; max-width:900px;
+    background:var(--win-solid); border-radius:14px;
+    box-shadow:var(--shadow); overflow:hidden;
+    border:.5px solid rgba(255,255,255,.16);
+    animation:winIn .5s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes winIn{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.window{animation:none}}
+
+  .titlebar{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; gap:.75rem;
+    padding:.8rem 1.1rem; background:var(--bar);
+    -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:.5px solid var(--line);
+  }
+  .traffic{display:flex;gap:8px}
+  .traffic i{width:12px;height:12px;border-radius:50%;display:block}
+  .traffic .r{background:var(--tl-r)}.traffic .y{background:var(--tl-y)}.traffic .g{background:var(--tl-g)}
+  .tb-title{flex:1;text-align:center;font-size:.8rem;font-weight:600;color:var(--ink-2);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .content{
+    padding:clamp(1.5rem,4vw,3rem) clamp(1rem,4.5vw,3.25rem) 3.5rem;
+    color:var(--ink); font-size:16.5px; line-height:1.72; letter-spacing:-.003em;
+  }
+  .content>*{max-width:46rem;margin-left:auto;margin-right:auto}
+
+  .eyebrow{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink);margin:0 0 .9rem}
+  h1{font-size:clamp(1.85rem,4.6vw,2.7rem);font-weight:700;line-height:1.12;letter-spacing:-.028em;text-wrap:balance;margin:0 0 1rem}
+  .lede{font-size:1.08rem;color:var(--ink-2);margin:0;text-wrap:pretty}
+
+  section{margin-top:3.5rem}
+  .sec-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.55rem}
+  .sec-num{
+    font-family:var(--mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--accent);
+    width:22px;height:22px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  }
+  .kicker{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0}
+  h2{font-size:clamp(1.3rem,2.9vw,1.65rem);font-weight:700;line-height:1.25;letter-spacing:-.02em;text-wrap:balance;margin:0 0 1rem}
+  h3{font-size:1.1rem;font-weight:700;letter-spacing:-.015em;margin:0}
+  p{margin:0 0 1.05rem}
+  p:last-child{margin-bottom:0}
+  strong{font-weight:600}
+  .hl{color:var(--accent-ink);font-weight:600}
+  code{font-family:var(--mono);font-size:.84em;background:var(--panel);padding:.12em .42em;border-radius:5px;color:var(--accent-ink)}
+
+  /* callouts */
+  .note{border-radius:14px;padding:1.05rem 1.3rem;margin:1.25rem 0;font-size:.95rem;line-height:1.62}
+  .note .lbl{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;font-weight:600}
+  .note p{margin:0 0 .55rem}.note p:last-child{margin:0}
+  .note.info{background:var(--accent-soft);color:var(--ink-2)} .note.info .lbl{color:var(--accent-ink)} .note.info strong{color:var(--accent-ink)}
+  .note.warn{background:var(--orange-soft);color:var(--ink-2)} .note.warn .lbl{color:var(--orange)} .note.warn strong{color:var(--orange)}
+  .note.danger{background:var(--red-soft);color:var(--ink-2)} .note.danger .lbl{color:var(--red)} .note.danger strong{color:var(--red)}
+  .note.ok{background:var(--green-soft);color:var(--ink-2)} .note.ok .lbl{color:var(--green)} .note.ok strong{color:var(--green)}
+  .note.plain{background:var(--panel);color:var(--ink-2)} .note.plain .lbl{color:var(--ink-3)} .note.plain strong{color:var(--ink)}
+
+  /* condition cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin:1.25rem 0}
+  .cd{background:var(--panel);border-radius:13px;padding:.9rem 1.05rem}
+  .cd .t{font-size:.86rem;font-weight:700;margin-bottom:.2rem;letter-spacing:-.01em}
+  .cd .d{font-size:.8rem;color:var(--ink-3);line-height:1.5}
+
+  /* figures */
+  figure{margin:1.5rem 0;padding:1.25rem;background:var(--card);border:.5px solid var(--line);border-radius:16px}
+  .fig-scroll{overflow-x:auto}
+  .fig-scroll svg{display:block;width:100%;min-width:640px;height:auto}
+  .dg text{font-family:var(--sans)}
+  .dg .ttl{font-size:12.5px;font-weight:700;fill:var(--ink)}
+  .dg .lbl{font-size:11px;font-weight:600;fill:var(--ink-2)}
+  .dg .cap{font-size:9.5px;fill:var(--ink-3)}
+  .dg .nd{fill:var(--panel);stroke:var(--line)}
+  .dg .nd-a{fill:var(--card);stroke:var(--accent);stroke-width:1.5}
+  .dg .ar{stroke:var(--ink-3);stroke-width:1.5;fill:none;marker-end:url(#ah)}
+  .dg .ar-d{stroke:var(--ink-3);stroke-width:1.4;fill:none;stroke-dasharray:4 4;marker-end:url(#ah)}
+  figcaption{margin-top:.9rem;font-size:.83rem;color:var(--ink-3);text-align:center;line-height:1.5}
+  .scroll-hint{display:none;font-size:.72rem;color:var(--ink-3);text-align:right;margin-bottom:.4rem;font-family:var(--mono)}
+  @media (max-width:680px){.scroll-hint{display:block}}
+
+  /* method blocks */
+  .method{background:var(--card);border:.5px solid var(--line);border-radius:16px;padding:1.5rem 1.5rem;margin:1.1rem 0}
+  .m-head{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:.45rem}
+  .m-badge{font-family:var(--mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--accent);padding:.2rem .55rem;border-radius:7px}
+  .m-badge.alt{background:var(--ink-3)}
+  .m-pill{font-size:.7rem;font-weight:600;padding:.18rem .58rem;border-radius:999px}
+  .m-pill.ok{background:var(--green-soft);color:var(--green)}
+  .m-pill.warn{background:var(--orange-soft);color:var(--orange)}
+  .m-pill.no{background:var(--red-soft);color:var(--red)}
+  .m-desc{color:var(--ink-2);margin:.4rem 0 1.1rem;font-size:.96rem}
+
+  .pts{list-style:none;margin:0;padding:0}
+  .pts li{position:relative;padding-left:1.3rem;margin-bottom:.55rem;font-size:.94rem;color:var(--ink-2);line-height:1.6}
+  .pts li:last-child{margin-bottom:0}
+  .pts li::before{content:"";position:absolute;left:.15rem;top:.66em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+  .pts li.warn::before{background:var(--orange)}
+  .pts li.no::before{background:var(--red)}
+  .pts li strong{color:var(--ink)}
+
+  .sub-h{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:1.35rem 0 .6rem;font-weight:600}
+
+  /* examples */
+  .ex{display:flex;gap:.7rem;align-items:flex-start;background:var(--panel);border-radius:11px;padding:.7rem .9rem;margin-bottom:.5rem;font-size:.88rem;color:var(--ink-2);line-height:1.55}
+  .ex:last-child{margin-bottom:0}
+  .ex .n{font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--accent-ink);background:var(--accent-soft);padding:.12rem .45rem;border-radius:5px;flex:0 0 auto;margin-top:.12rem}
+  .ex.bad .n{color:var(--red);background:var(--red-soft)}
+  .ex strong{color:var(--ink)}
+
+  /* table */
+  .table-wrap{overflow-x:auto;margin-top:1.25rem;border:.5px solid var(--line);border-radius:16px}
+  table{border-collapse:collapse;width:100%;min-width:620px;font-size:.88rem;background:var(--card)}
+  th,td{text-align:left;padding:.8rem 1rem;vertical-align:top}
+  thead th{font-size:.74rem;font-weight:700;color:var(--ink);background:var(--panel);border-bottom:.5px solid var(--line)}
+  thead th .sub{display:block;font-family:var(--mono);font-size:.62rem;font-weight:500;color:var(--ink-3);letter-spacing:.03em;margin-top:.12rem}
+  tbody th{font-weight:600;color:var(--ink-2);white-space:nowrap;font-size:.8rem}
+  tbody td{color:var(--ink-2)}
+  tbody tr{border-top:.5px solid var(--line-soft)}
+  .yes{color:var(--green);font-weight:600}
+  .no-c{color:var(--red);font-weight:600}
+  .par{color:var(--orange);font-weight:600}
+
+  /* checklist */
+  .check{background:var(--card);border:.5px solid var(--line);border-radius:16px;overflow:hidden;margin-top:1.25rem}
+  .ck{display:flex;gap:.75rem;align-items:flex-start;padding:.9rem 1.1rem;border-top:.5px solid var(--line-soft);font-size:.92rem;color:var(--ink-2);line-height:1.55}
+  .ck:first-child{border-top:0}
+  .ck .box{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--accent);flex:0 0 auto;margin-top:.22rem;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:.62rem;font-weight:700}
+  .ck strong{color:var(--ink)}
+
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:.5px solid var(--line);font-size:.79rem;color:var(--ink-3);line-height:1.55}
+
+  /* ── TOC sidebar / off-canvas drawer ─────────────────────────── */
+  .layout{width:100%;max-width:900px;margin:0 auto}
+  .toc-panel{
+    position:fixed;top:0;left:0;height:100vh;width:min(300px,86vw);
+    background:var(--card);border-right:.5px solid var(--line);
+    box-shadow:0 0 40px rgba(0,0,0,.22);
+    transform:translateX(-100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    z-index:50;display:flex;flex-direction:column;overflow:hidden;
+  }
+  html[data-toc="open"] .toc-panel{transform:translateX(0)}
+  .toc-head{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1rem;border-bottom:.5px solid var(--line);flex:0 0 auto}
+  .toc-head .toc-title{font-family:var(--mono);font-size:.68rem;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+  .toc-close{display:flex;width:26px;height:26px;border-radius:7px;border:0;background:var(--panel);color:var(--ink-3);font-size:.9rem;line-height:1;cursor:pointer;align-items:center;justify-content:center}
+  .toc-close:hover{background:var(--line-soft);color:var(--ink)}
+  .toc-list{overflow-y:auto;padding:.55rem;flex:1}
+  .toc-item{margin-bottom:.1rem}
+  .toc-row{display:flex;align-items:center;gap:.3rem}
+  .toc-link{flex:1;min-width:0;display:flex;align-items:center;gap:.55rem;padding:.48rem .55rem;border-radius:9px;font-size:.83rem;color:var(--ink-2);text-decoration:none;line-height:1.32}
+  .toc-link span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .toc-link:hover{background:var(--panel);color:var(--ink)}
+  .toc-link.active{background:var(--accent-soft);color:var(--accent-ink);font-weight:600}
+  .toc-num{font-family:var(--mono);font-size:.6rem;font-weight:700;color:#fff;background:var(--ink-3);width:17px;height:17px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .toc-link.active .toc-num{background:var(--accent)}
+  .toc-expand{width:20px;height:20px;flex:0 0 auto;border:0;background:none;color:var(--ink-3);display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;transition:transform .18s}
+  .toc-expand.open{transform:rotate(90deg)}
+  .toc-expand:hover{background:var(--panel)}
+  .toc-expand-spacer{width:20px;flex:0 0 auto}
+  .toc-sub{list-style:none;margin:.05rem 0 .35rem 1.55rem;padding:0;display:none}
+  .toc-sub.open{display:block}
+  .toc-subitem a{display:block;padding:.32rem .55rem;border-radius:7px;font-size:.76rem;color:var(--ink-3);text-decoration:none;line-height:1.3}
+  .toc-subitem a:hover{background:var(--panel);color:var(--ink-2)}
+  .toc-subitem a.active{color:var(--accent-ink);font-weight:600}
+  .toc-backdrop{position:fixed;inset:0;background:rgba(10,14,24,.32);z-index:45;opacity:0;pointer-events:none;transition:opacity .25s}
+  html[data-toc="open"] .toc-backdrop{opacity:1;pointer-events:auto}
+  .toc-btn{flex:0 0 auto;width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:var(--ink-2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,color .15s}
+  .toc-btn:hover{background:var(--panel);color:var(--ink)}
+  .toc-btn:active{transform:scale(.93)}
+  @media (min-width:1181px){
+    .layout{max-width:1200px;display:flex;gap:22px;align-items:flex-start;justify-content:center}
+    .window{flex:1 1 auto;max-width:900px}
+    .toc-panel{
+      position:sticky;top:1.4rem;left:auto;height:auto;max-height:calc(100vh - 2.8rem);
+      width:258px;flex:0 0 258px;transform:none;
+      border-right:0;border:.5px solid var(--line);border-radius:14px;
+      box-shadow:0 10px 30px -10px rgba(20,30,60,.18);
+      transition:opacity .2s ease,flex-basis .2s ease,width .2s ease;
+    }
+    html[data-toc="closed"] .toc-panel{flex:0 0 0;width:0;padding:0;border:0;box-shadow:none;opacity:0;pointer-events:none;overflow:hidden}
+    html[data-toc="closed"] .layout{gap:0}
+    .toc-close,.toc-backdrop{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){.toc-panel,.toc-backdrop,.toc-expand{transition:none}}
+
+  /* ── code block copy button ──────────────────────────────────── */
+  .term-copy{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:.3rem;font-family:var(--mono);font-size:.64rem;font-weight:600;letter-spacing:.02em;color:var(--term-cmt);background:transparent;border:.5px solid var(--line);border-radius:7px;padding:.26rem .5rem;cursor:pointer;transition:background .15s,color .15s,border-color .15s;position:relative;z-index:2}
+  .term-copy:hover{background:var(--panel);color:var(--ink-2);border-color:var(--ink-3)}
+  .term-copy.copied{color:var(--green);border-color:var(--green)}
+  .term-copy svg{display:block;flex:0 0 auto}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="ah" markerWidth="9" markerHeight="9" refX="7.5" refY="4.5" orient="auto"><path d="M0,1 L8,4.5 L0,8 Z" fill="var(--ink-3)"/></marker>
+</defs></svg>
+
+<div class="desktop">
+  <div id="tocBackdrop" class="toc-backdrop"></div>
+  <div class="layout">
+  <aside id="tocPanel" class="toc-panel" aria-label="문서 목차">
+    <div class="toc-head">
+      <span class="toc-title">목차</span>
+      <button type="button" class="toc-close" aria-label="목차 닫기">✕</button>
+    </div>
+    <div id="tocList" class="toc-list"></div>
+  </aside>
+  <div class="window">
+
+    <div class="titlebar">
+      <div class="traffic"><i class="r"></i><i class="y"></i><i class="g"></i></div>
+      <div class="tb-title">De novo 전사체 분석 가이드 — 분석 방향 및 Assembly Group 설정</div>
+      <button type="button" class="toc-btn" aria-label="목차 토글">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="content">
+
+      <header>
+        <p class="eyebrow">De novo Transcriptome · Non-genome guided</p>
+        <h1>분석 방향 결정과 Assembly Group 설정 가이드</h1>
+        <p class="lede">De novo 분석은 <strong>조립(Assembly)에 어떤 샘플을 넣느냐</strong>가 전체 분석의 기준 서열을 결정합니다. 기준이 달라지면 결과를 비교할 수 없으므로, 데이터 생산 전에 방향을 확정해야 합니다.</p>
+      </header>
+
+      <!-- ===================== 0. 원리 ===================== -->
+      <section>
+        <div class="sec-head"><span class="sec-num">1</span><p class="kicker">First Principle</p></div>
+        <h2>모든 판단의 기준 — Contig set</h2>
+        <p>De novo 분석은 참조 유전체가 없으므로, 입력된 read를 조립해 <span class="hl">가상의 참조 서열인 Contig set</span>(<code>Trinity.fasta</code>)을 자체적으로 구축합니다. 발현량(Read count·TPM)은 <strong>이 Contig set을 좌표계로 삼아 계산된 값</strong>입니다. 따라서 좌표계가 다르면 값을 나란히 놓을 수 없습니다.</p>
+
+        <figure>
+          <p class="scroll-hint">← 좌우 스크롤</p>
+          <div class="fig-scroll">
+          <svg class="dg" viewBox="0 0 700 300" role="img" aria-label="독립적으로 조립된 두 분석은 서로 다른 Contig set을 만들어 발현량을 병합할 수 없음">
+            <text x="24" y="34" class="lbl">샘플군 A</text>
+            <rect x="24" y="42" width="118" height="70" rx="12" class="nd"/>
+            <rect x="38" y="55" width="90" height="12" rx="6" fill="var(--accent)" opacity=".85"/>
+            <rect x="38" y="73" width="90" height="12" rx="6" fill="var(--accent)" opacity=".55"/>
+            <rect x="38" y="91" width="90" height="12" rx="6" fill="var(--accent)" opacity=".35"/>
+            <line x1="146" y1="77" x2="192" y2="77" class="ar"/>
+            <rect x="196" y="53" width="104" height="48" rx="12" class="nd-a"/>
+            <text x="248" y="74" class="ttl" fill="var(--accent-ink)" text-anchor="middle">Assembly</text>
+            <text x="248" y="90" class="cap" text-anchor="middle">de novo 조립</text>
+            <line x1="304" y1="77" x2="350" y2="77" class="ar"/>
+            <text x="360" y="44" class="lbl">Contig set A</text>
+            <rect x="360" y="52" width="72" height="11" rx="5.5" fill="var(--accent)"/>
+            <rect x="360" y="68" width="108" height="11" rx="5.5" fill="var(--cyan)"/>
+            <rect x="360" y="84" width="54" height="11" rx="5.5" fill="var(--green)"/>
+
+            <text x="24" y="182" class="lbl">샘플군 B</text>
+            <rect x="24" y="190" width="118" height="70" rx="12" class="nd"/>
+            <rect x="38" y="203" width="90" height="12" rx="6" fill="var(--purple)" opacity=".8"/>
+            <rect x="38" y="221" width="90" height="12" rx="6" fill="var(--purple)" opacity=".5"/>
+            <rect x="38" y="239" width="90" height="12" rx="6" fill="var(--purple)" opacity=".3"/>
+            <line x1="146" y1="225" x2="192" y2="225" class="ar"/>
+            <rect x="196" y="201" width="104" height="48" rx="12" class="nd-a"/>
+            <text x="248" y="222" class="ttl" fill="var(--accent-ink)" text-anchor="middle">Assembly</text>
+            <text x="248" y="238" class="cap" text-anchor="middle">de novo 조립</text>
+            <line x1="304" y1="225" x2="350" y2="225" class="ar"/>
+            <text x="360" y="192" class="lbl">Contig set B</text>
+            <rect x="360" y="200" width="98" height="11" rx="5.5" fill="var(--purple)"/>
+            <rect x="360" y="216" width="60" height="11" rx="5.5" fill="var(--orange)"/>
+            <rect x="360" y="232" width="86" height="11" rx="5.5" fill="var(--pink)"/>
+
+            <line x1="478" y1="72" x2="566" y2="145" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <line x1="478" y1="230" x2="566" y2="159" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <circle cx="608" cy="151" r="30" fill="none" stroke="var(--red)" stroke-width="3"/>
+            <rect x="590" y="146" width="36" height="10" rx="5" fill="var(--red)" transform="rotate(-45 608 151)"/>
+            <text x="608" y="205" font-size="13" font-weight="700" fill="var(--red)" text-anchor="middle">발현량 병합 불가</text>
+            <text x="608" y="223" class="cap" text-anchor="middle">기준 Contig set이 다름</text>
+          </svg>
+          </div>
+          <figcaption>독립적으로 조립하면 contig의 구성·개수·길이가 모두 달라집니다. Reseq에서 Human과 Mouse의 발현량을 한 표로 합칠 수 없는 것과 같은 이치입니다.</figcaption>
+        </figure>
+
+        <div class="note info">
+          <span class="lbl">용어 정리 — 반드시 구분</span>
+          <p><strong>Assembly group</strong> = 조립(Assembly)에 <strong>참여</strong>하는 샘플. 기준 서열(Contig set)을 만드는 재료입니다.</p>
+          <p><strong>정량 대상 샘플</strong> = 만들어진 Contig set에 <strong>매핑되어 발현량이 계산</strong>되는 샘플. Assembly group에 포함되지 않아도 정량 대상이 될 수 있습니다.</p>
+        </div>
+
+        <div class="note danger">
+          <span class="lbl">핵심 원칙</span>
+          <p>함께 DEG 분석할 샘플은 반드시 <strong>동일한 Contig set을 기준으로 정량</strong>되어야 합니다. (＝ 반드시 하나의 분석 건으로 함께 진행)</p>
+          <p style="margin-top:.5rem">동일한 샘플군으로 재조립하더라도 clustering 과정의 <strong>난수(random) 요소</strong>로 Contig set이 미세하게 달라지므로, "나중에 똑같이 다시 만들면 된다"는 성립하지 않습니다.</p>
+        </div>
+      </section>
+
+      <!-- ===================== 2. 분석 방향 결정 ===================== -->
+      <section>
+        <div class="sec-head"><span class="sec-num">2</span><p class="kicker">Decision</p></div>
+        <h2>분석 방향 결정 흐름</h2>
+        <p>Reference 보유 여부와 기존 분석 결과 유무에 따라 <strong>[A] Assemble부터 진행</strong> 또는 <strong>[B] Assemble 결과 재활용</strong>으로 나뉩니다.</p>
+
+        <figure>
+          <p class="scroll-hint">← 좌우 스크롤</p>
+          <div class="fig-scroll">
+          <svg class="dg" viewBox="0 0 700 400" role="img" aria-label="분석 방향 결정 트리">
+            <rect x="200" y="14" width="290" height="50" rx="12" class="nd"/>
+            <text x="345" y="34" class="lbl" text-anchor="middle">genome fasta + gene annotation(gff/gff3)</text>
+            <text x="345" y="52" class="ttl" text-anchor="middle">둘 다 보유하고 있는가?</text>
+
+            <line x1="490" y1="39" x2="520" y2="39" class="ar"/>
+            <text x="505" y="30" class="cap" text-anchor="middle">예</text>
+            <rect x="524" y="16" width="160" height="46" rx="12" class="nd" stroke-dasharray="4 4"/>
+            <text x="604" y="35" class="lbl" text-anchor="middle" fill="var(--ink-3)">Reference-based 분석</text>
+            <text x="604" y="51" class="cap" text-anchor="middle">본 문서 범위 밖</text>
+
+            <line x1="345" y1="64" x2="345" y2="98" class="ar"/>
+            <text x="368" y="86" class="cap">아니오 — 하나라도 없으면</text>
+            <rect x="265" y="102" width="160" height="42" rx="12" fill="var(--accent-soft)" stroke="none"/>
+            <text x="345" y="128" class="ttl" fill="var(--accent-ink)" text-anchor="middle">De novo 분석 진행</text>
+
+            <line x1="345" y1="144" x2="345" y2="172" class="ar"/>
+            <rect x="228" y="176" width="234" height="46" rx="12" class="nd"/>
+            <text x="345" y="196" class="ttl" text-anchor="middle">기존 assemble 결과가 있고,</text>
+            <text x="345" y="212" class="lbl" text-anchor="middle">기준을 고정하고 싶은가?</text>
+
+            <path d="M228,199 L130,199 L130,238" class="ar"/>
+            <text x="160" y="192" class="cap">아니오</text>
+            <path d="M462,199 L578,199 L578,238" class="ar"/>
+            <text x="530" y="192" class="cap">예</text>
+
+            <rect x="30" y="242" width="200" height="52" rx="13" fill="var(--accent)" stroke="none"/>
+            <text x="130" y="264" class="ttl" fill="#fff" text-anchor="middle">[A] Assemble부터 진행</text>
+            <text x="130" y="281" font-size="9.5" fill="rgba(255,255,255,.85)" text-anchor="middle">본사 default · 권장 방식</text>
+
+            <rect x="478" y="242" width="200" height="52" rx="13" fill="var(--panel)" stroke="var(--accent)" stroke-width="1.5"/>
+            <text x="578" y="264" class="ttl" fill="var(--accent-ink)" text-anchor="middle">[B] Assemble 결과 재활용</text>
+            <text x="578" y="281" class="cap" text-anchor="middle">quantification만 진행</text>
+
+            <path d="M130,294 L130,312 L86,312 L86,332" class="ar"/>
+            <path d="M130,294 L130,312 L232,312 L232,332" class="ar"/>
+            <path d="M130,294 L130,312 L378,312 L378,332" class="ar"/>
+
+            <rect x="20" y="336" width="132" height="52" rx="12" class="nd"/>
+            <text x="86" y="356" class="ttl" text-anchor="middle">A-1</text>
+            <text x="86" y="373" class="cap" text-anchor="middle">전체 샘플 지정</text>
+            <rect x="166" y="336" width="132" height="52" rx="12" class="nd"/>
+            <text x="232" y="356" class="ttl" text-anchor="middle">A-2</text>
+            <text x="232" y="373" class="cap" text-anchor="middle">일부 샘플만 지정</text>
+            <rect x="312" y="336" width="132" height="52" rx="12" class="nd"/>
+            <text x="378" y="356" class="ttl" text-anchor="middle">A-3</text>
+            <text x="378" y="373" class="cap" text-anchor="middle">샘플별 개별 조립</text>
+          </svg>
+          </div>
+          <figcaption>genome fasta와 annotation 중 <strong>하나라도 없으면</strong> de novo로 진행합니다. (genome fasta만 있는 경우 genome-guided 조립도 가능하나, 표준 파이프라인은 de novo로 분기합니다.)</figcaption>
+        </figure>
+      </section>
+
+      <!-- ===================== 3. [A] ===================== -->
+      <section>
+        <div class="sec-head"><span class="sec-num">3</span><p class="kicker">Category A</p></div>
+        <h2>[A] Assemble부터 진행하는 경우</h2>
+        <div class="cards">
+          <div class="cd"><div class="t">최초 진행</div><div class="d">기존 assemble 결과가 없는 경우</div></div>
+          <div class="cd"><div class="t">본사 default</div><div class="d">표준이자 권장 분석 방식</div></div>
+          <div class="cd"><div class="t">Reference 부재</div><div class="d">genome fasta·annotation 중 하나라도 없음</div></div>
+        </div>
+
+        <!-- A-1 -->
+        <div class="method">
+          <div class="m-head">
+            <span class="m-badge">A-1</span>
+            <h3>Assembly group = 모든 샘플</h3>
+            <span class="m-pill ok">전체 DEG 가능</span>
+          </div>
+          <p class="m-desc">비교 대상 전체 샘플을 하나의 assembly group으로 지정해 <strong>단일 통합 Contig set</strong>을 만들고, 모든 샘플을 여기에 정량합니다.</p>
+
+          <div class="fig-scroll" style="margin:1rem 0">
+            <svg class="dg" viewBox="0 0 700 190" role="img" aria-label="A-1 전체 샘플 조립 흐름">
+              <text x="20" y="26" class="lbl" fill="var(--accent-ink)">assembly group = 전체 샘플</text>
+              <rect x="20" y="34" width="150" height="132" rx="12" fill="var(--accent-soft)" stroke="none"/>
+              <rect x="34" y="46" width="122" height="20" rx="10" fill="var(--accent)" opacity=".9"/>
+              <text x="95" y="60" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">샘플 1</text>
+              <rect x="34" y="72" width="122" height="20" rx="10" fill="var(--accent)" opacity=".75"/>
+              <text x="95" y="86" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">샘플 2</text>
+              <rect x="34" y="98" width="122" height="20" rx="10" fill="var(--accent)" opacity=".6"/>
+              <text x="95" y="112" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">샘플 3</text>
+              <rect x="34" y="124" width="122" height="20" rx="10" fill="var(--accent)" opacity=".45"/>
+              <text x="95" y="138" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">샘플 N</text>
+
+              <line x1="174" y1="100" x2="216" y2="100" class="ar"/>
+              <rect x="220" y="76" width="98" height="48" rx="12" class="nd-a"/>
+              <text x="269" y="97" class="ttl" fill="var(--accent-ink)" text-anchor="middle">Assembly</text>
+              <text x="269" y="113" class="cap" text-anchor="middle">1회 · 통합</text>
+              <line x1="322" y1="100" x2="364" y2="100" class="ar"/>
+
+              <text x="372" y="62" class="lbl">통합 Contig set</text>
+              <rect x="372" y="70" width="88" height="12" rx="6" fill="var(--accent)"/>
+              <rect x="372" y="88" width="124" height="12" rx="6" fill="var(--cyan)"/>
+              <rect x="372" y="106" width="66" height="12" rx="6" fill="var(--green)"/>
+              <text x="372" y="136" class="cap">단일 기준 서열 (좌표계)</text>
+
+              <line x1="504" y1="100" x2="546" y2="100" class="ar"/>
+              <rect x="550" y="62" width="132" height="76" rx="13" fill="var(--green-soft)" stroke="none"/>
+              <text x="616" y="88" class="lbl" text-anchor="middle">전 샘플 정량</text>
+              <text x="616" y="112" font-size="12.5" font-weight="700" fill="var(--green)" text-anchor="middle">✓ 전체 DEG 가능</text>
+            </svg>
+          </div>
+
+          <p class="sub-h">특성</p>
+          <ul class="pts">
+            <li>해당 집단 전체에 대한 <strong>model 서열</strong>을 build할 수 있음</li>
+            <li>집단의 <strong>전체적인 특성</strong>을 가장 잘 반영 — 공통 특성 분석에 유리</li>
+            <li class="warn"><strong>주의</strong> — 샘플 간 특성 차이가 크면 공유되는 유사 서열이 적어 clustering이 잘 되지 않고, <strong>assemble quality가 크게 저하</strong>될 수 있음 (예: metagenome)</li>
+          </ul>
+
+          <div class="fig-scroll" style="margin:1.25rem 0 .5rem">
+            <svg class="dg" viewBox="0 0 700 250" role="img" aria-label="샘플 이질성에 따른 조립 품질 비교">
+              <rect x="16" y="26" width="326" height="204" rx="14" fill="var(--green-soft)" stroke="none"/>
+              <text x="36" y="54" class="ttl" fill="var(--green)">샘플 간 특성이 유사</text>
+              <text x="36" y="72" class="cap">공통 서열 다수 → clustering 정상</text>
+              <text x="36" y="110" class="cap">Contig 수</text>
+              <rect x="110" y="100" width="216" height="13" rx="6.5" fill="var(--card)"/>
+              <rect x="110" y="100" width="72" height="13" rx="6.5" fill="var(--green)"/>
+              <text x="190" y="110" class="cap">적정 수준</text>
+              <text x="36" y="152" class="cap">N50</text>
+              <rect x="110" y="142" width="216" height="12" rx="6" fill="var(--card)"/>
+              <rect x="110" y="142" width="150" height="12" rx="6" fill="var(--green)"/>
+              <text x="36" y="176" class="cap">평균 길이</text>
+              <rect x="110" y="166" width="216" height="12" rx="6" fill="var(--card)"/>
+              <rect x="110" y="166" width="124" height="12" rx="6" fill="var(--green)" opacity=".6"/>
+              <text x="36" y="208" font-size="11" font-weight="700" fill="var(--green)">편차 작음 — 정상 조립</text>
+
+              <rect x="358" y="26" width="326" height="204" rx="14" fill="var(--orange-soft)" stroke="none"/>
+              <text x="378" y="54" class="ttl" fill="var(--orange)">샘플 간 특성 차이가 큼</text>
+              <text x="378" y="72" class="cap">예: metagenome → clustering 실패</text>
+              <text x="378" y="110" class="cap">Contig 수</text>
+              <rect x="452" y="100" width="216" height="13" rx="6.5" fill="var(--card)"/>
+              <rect x="452" y="100" width="212" height="13" rx="6.5" fill="var(--orange)"/>
+              <text x="378" y="130" font-size="10" font-weight="700" fill="var(--orange)">수십만 ~ 수백만 개 이상</text>
+              <text x="378" y="152" class="cap">N50</text>
+              <rect x="452" y="142" width="216" height="12" rx="6" fill="var(--card)"/>
+              <rect x="452" y="142" width="204" height="12" rx="6" fill="var(--orange)"/>
+              <text x="378" y="176" class="cap">평균 길이</text>
+              <rect x="452" y="166" width="216" height="12" rx="6" fill="var(--card)"/>
+              <rect x="452" y="166" width="44" height="12" rx="6" fill="var(--orange)" opacity=".6"/>
+              <text x="378" y="208" font-size="11" font-weight="700" fill="var(--orange)">편차 매우 큼 — 품질 저하 신호</text>
+            </svg>
+          </div>
+          <p style="font-size:.83rem;color:var(--ink-3);text-align:center;margin:0 0 1rem">품질 판단 지표 — <strong>contig 개수 폭증</strong>, 그리고 <strong>N50과 평균 길이의 큰 편차</strong>(짧은 contig가 대량 생성됨)</p>
+
+          <div class="note ok">
+            <span class="lbl">추천 상황</span>
+            <p>전체 샘플 간 DEG 분석이 필요한 경우 — <strong>가장 표준적이고 권장되는 설정</strong>입니다.</p>
+          </div>
+        </div>
+
+        <!-- A-2 -->
+        <div class="method">
+          <div class="m-head">
+            <span class="m-badge">A-2</span>
+            <h3>Assembly group = 일부 샘플만 지정</h3>
+            <span class="m-pill ok">전체 DEG 가능</span>
+            <span class="m-pill warn">특이 서열 누락</span>
+          </div>
+          <p class="m-desc">대표성 있는 샘플만 조립에 참여시켜 기준 서열을 만들고, <strong>나머지 샘플은 그 Contig set에 매핑</strong>하여 정량합니다. 전반적인 이론은 A-1과 동일합니다.</p>
+
+          <div class="fig-scroll" style="margin:1rem 0">
+            <svg class="dg" viewBox="0 0 700 240" role="img" aria-label="A-2 일부 샘플만 조립 흐름">
+              <text x="20" y="26" class="lbl">전체 샘플</text>
+              <rect x="20" y="34" width="152" height="176" rx="12" class="nd"/>
+              <text x="32" y="52" font-size="9" font-weight="700" fill="var(--accent-ink)">assembly group</text>
+              <rect x="28" y="56" width="136" height="56" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-dasharray="4 3"/>
+              <rect x="36" y="63" width="120" height="19" rx="9.5" fill="var(--accent)"/>
+              <text x="96" y="76" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">샘플 1</text>
+              <rect x="36" y="86" width="120" height="19" rx="9.5" fill="var(--accent)" opacity=".8"/>
+              <text x="96" y="99" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">샘플 2</text>
+              <rect x="36" y="124" width="120" height="19" rx="9.5" fill="var(--card)" stroke="var(--line)"/>
+              <text x="96" y="137" font-size="10" fill="var(--ink-3)" text-anchor="middle" font-weight="600">샘플 3</text>
+              <rect x="36" y="148" width="120" height="19" rx="9.5" fill="var(--card)" stroke="var(--line)"/>
+              <text x="96" y="161" font-size="10" fill="var(--ink-3)" text-anchor="middle" font-weight="600">샘플 4</text>
+              <rect x="36" y="172" width="120" height="19" rx="9.5" fill="var(--card)" stroke="var(--line)"/>
+              <text x="96" y="185" font-size="10" fill="var(--ink-3)" text-anchor="middle" font-weight="600">샘플 5</text>
+
+              <line x1="176" y1="84" x2="224" y2="84" class="ar"/>
+              <rect x="228" y="60" width="96" height="48" rx="12" class="nd-a"/>
+              <text x="276" y="81" class="ttl" fill="var(--accent-ink)" text-anchor="middle">Assembly</text>
+              <text x="276" y="97" class="cap" text-anchor="middle">대표 샘플만</text>
+              <line x1="328" y1="84" x2="370" y2="84" class="ar"/>
+
+              <text x="378" y="48" class="lbl">Contig set (기준)</text>
+              <rect x="378" y="56" width="84" height="12" rx="6" fill="var(--accent)"/>
+              <rect x="378" y="74" width="118" height="12" rx="6" fill="var(--cyan)"/>
+              <rect x="378" y="92" width="62" height="12" rx="6" fill="var(--green)"/>
+
+              <path d="M176,158 C 250,205 320,200 374,124" class="ar-d"/>
+              <text x="252" y="216" font-size="10" fill="var(--ink-3)">매핑만 (조립 미참여) — 정량은 전 샘플 수행</text>
+
+              <text x="378" y="146" font-size="10" font-weight="700" fill="var(--orange)">미포함 샘플 특이 서열 → 누락</text>
+              <rect x="378" y="154" width="100" height="11" rx="5.5" fill="none" stroke="var(--orange)" stroke-dasharray="4 3"/>
+              <rect x="378" y="170" width="70" height="11" rx="5.5" fill="none" stroke="var(--orange)" stroke-dasharray="4 3"/>
+
+              <line x1="516" y1="80" x2="552" y2="80" class="ar"/>
+              <rect x="556" y="44" width="128" height="72" rx="13" fill="var(--green-soft)" stroke="none"/>
+              <text x="620" y="70" class="lbl" text-anchor="middle">전 샘플 정량</text>
+              <text x="620" y="94" font-size="12" font-weight="700" fill="var(--green)" text-anchor="middle">✓ DEG 가능</text>
+            </svg>
+          </div>
+
+          <ul class="pts">
+            <li>Assembly group에 포함되지 않은 샘플도 <strong>정량 대상에는 포함</strong>되므로 DEG 분석은 정상 수행됨</li>
+            <li class="warn">단, assembly group에 지정되지 않은 샘플에서 <strong>특이적으로 나타나는 서열은 조립되지 않아 누락</strong>됨</li>
+          </ul>
+
+          <div class="note ok" style="margin-top:1.1rem">
+            <span class="lbl">추천 상황</span>
+            <p>Control 샘플이 명확한 경우, 또는 특성을 대표하는 집단이 있어 해당 샘플군만 <strong>reference처럼 활용</strong>하고 싶은 경우</p>
+          </div>
+
+          <p class="sub-h">적용 예시</p>
+          <div class="ex"><span class="n">예시 1</span><div>바이러스 감염 / 비감염 샘플 중 <strong>비감염 샘플만</strong> assembly group으로 지정 — 정상 상태를 기준 서열로 삼음</div></div>
+          <div class="ex"><span class="n">예시 2</span><div>식물 잎·줄기·뿌리 3반복(총 9샘플) 중 <strong>각 조직에서 1개씩 선발한 3샘플</strong>을 하나의 assembly group으로 지정 — 조직 특성을 고루 반영하면서 조립 부담을 낮춤</div></div>
+          <div class="ex bad"><span class="n">예시 3</span><div>같은 9샘플에서 <strong>assembly group을 조직별로 3개로 분리</strong> 지정 — 조직별 특이 서열 확보에는 유리하나, <strong>Contig set이 3개로 나뉘어 조직 간 DEG 비교는 불가</strong></div></div>
+
+          <figure style="margin-top:1.1rem">
+            <p class="scroll-hint">← 좌우 스크롤</p>
+            <div class="fig-scroll">
+            <svg class="dg" viewBox="0 0 700 250" role="img" aria-label="예시 2와 예시 3의 결과 차이 비교">
+              <rect x="16" y="26" width="326" height="204" rx="14" fill="var(--panel)" stroke="none"/>
+              <text x="36" y="52" class="ttl">예시 2 — 조직당 1개씩 선발</text>
+              <text x="36" y="69" class="cap">assembly group 1개 → Contig set 1개</text>
+              <rect x="36" y="84" width="72" height="22" rx="8" fill="var(--accent)" opacity=".9"/>
+              <text x="72" y="99" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">잎</text>
+              <rect x="36" y="112" width="72" height="22" rx="8" fill="var(--accent)" opacity=".75"/>
+              <text x="72" y="127" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">줄기</text>
+              <rect x="36" y="140" width="72" height="22" rx="8" fill="var(--accent)" opacity=".6"/>
+              <text x="72" y="155" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">뿌리</text>
+              <path d="M112,95 L134,118" class="ar"/><path d="M112,123 L134,123" class="ar"/><path d="M112,151 L134,128" class="ar"/>
+              <rect x="140" y="100" width="72" height="46" rx="11" class="nd-a"/>
+              <text x="176" y="120" font-size="11" font-weight="700" fill="var(--accent-ink)" text-anchor="middle">Assembly</text>
+              <text x="176" y="135" class="cap" text-anchor="middle">1회</text>
+              <line x1="216" y1="123" x2="238" y2="123" class="ar"/>
+              <rect x="244" y="104" width="72" height="10" rx="5" fill="var(--accent)"/>
+              <rect x="244" y="118" width="92" height="10" rx="5" fill="var(--cyan)"/>
+              <rect x="244" y="132" width="58" height="10" rx="5" fill="var(--green)"/>
+              <rect x="36" y="180" width="286" height="34" rx="10" fill="var(--green-soft)" stroke="none"/>
+              <text x="179" y="201" font-size="11" font-weight="700" fill="var(--green)" text-anchor="middle">✓ 9샘플 전체 정량 · 조직 간 DEG 가능</text>
+
+              <rect x="358" y="26" width="326" height="204" rx="14" fill="var(--panel)" stroke="none"/>
+              <text x="378" y="52" class="ttl">예시 3 — 조직별로 group 분리</text>
+              <text x="378" y="69" class="cap">assembly group 3개 → Contig set 3개</text>
+              <rect x="378" y="84" width="58" height="20" rx="8" fill="var(--accent)" opacity=".9"/>
+              <text x="407" y="98" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="600">잎 ×3</text>
+              <line x1="440" y1="94" x2="458" y2="94" class="ar"/>
+              <rect x="462" y="83" width="52" height="22" rx="8" class="nd-a"/>
+              <text x="488" y="98" font-size="9.5" font-weight="700" fill="var(--accent-ink)" text-anchor="middle">Asm</text>
+              <line x1="518" y1="94" x2="536" y2="94" class="ar"/>
+              <rect x="542" y="89" width="76" height="10" rx="5" fill="var(--accent)"/>
+
+              <rect x="378" y="114" width="58" height="20" rx="8" fill="var(--purple)" opacity=".9"/>
+              <text x="407" y="128" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="600">줄기 ×3</text>
+              <line x1="440" y1="124" x2="458" y2="124" class="ar"/>
+              <rect x="462" y="113" width="52" height="22" rx="8" class="nd-a"/>
+              <text x="488" y="128" font-size="9.5" font-weight="700" fill="var(--accent-ink)" text-anchor="middle">Asm</text>
+              <line x1="518" y1="124" x2="536" y2="124" class="ar"/>
+              <rect x="542" y="119" width="56" height="10" rx="5" fill="var(--purple)"/>
+
+              <rect x="378" y="144" width="58" height="20" rx="8" fill="var(--orange)" opacity=".9"/>
+              <text x="407" y="158" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="600">뿌리 ×3</text>
+              <line x1="440" y1="154" x2="458" y2="154" class="ar"/>
+              <rect x="462" y="143" width="52" height="22" rx="8" class="nd-a"/>
+              <text x="488" y="158" font-size="9.5" font-weight="700" fill="var(--accent-ink)" text-anchor="middle">Asm</text>
+              <line x1="518" y1="154" x2="536" y2="154" class="ar"/>
+              <rect x="542" y="149" width="88" height="10" rx="5" fill="var(--pink)"/>
+
+              <rect x="378" y="180" width="286" height="34" rx="10" fill="var(--red-soft)" stroke="none"/>
+              <text x="521" y="201" font-size="11" font-weight="700" fill="var(--red)" text-anchor="middle">✕ 조직 간 DEG 불가 · 조직 내 비교만 가능</text>
+            </svg>
+            </div>
+            <figcaption>동일한 9개 샘플이라도 <strong>assembly group을 몇 개로 나누는가</strong>에 따라 비교 가능 범위가 완전히 달라집니다.</figcaption>
+          </figure>
+        </div>
+
+        <!-- A-3 -->
+        <div class="method">
+          <div class="m-head">
+            <span class="m-badge alt">A-3</span>
+            <h3>각 샘플별로 Assemble 진행</h3>
+            <span class="m-pill no">샘플 간 DEG 불가</span>
+          </div>
+          <p class="m-desc">샘플마다 독립적으로 조립하여 <strong>샘플 개수만큼의 Contig set</strong>을 생성합니다. 각 샘플에 특이적인 model 서열을 얻는 것이 목적입니다.</p>
+
+          <div class="fig-scroll" style="margin:1rem 0">
+            <svg class="dg" viewBox="0 0 700 280" role="img" aria-label="A-3 샘플별 개별 조립 흐름">
+              <rect x="24" y="34" width="88" height="32" rx="10" fill="var(--accent)" opacity=".9"/>
+              <text x="68" y="55" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">샘플 1</text>
+              <line x1="116" y1="50" x2="152" y2="50" class="ar"/>
+              <rect x="156" y="28" width="90" height="44" rx="11" class="nd-a"/>
+              <text x="201" y="55" font-size="11" font-weight="700" fill="var(--accent-ink)" text-anchor="middle">Assembly</text>
+              <line x1="250" y1="50" x2="286" y2="50" class="ar"/>
+              <text x="294" y="26" class="cap">Contig set 1</text>
+              <rect x="294" y="34" width="76" height="10" rx="5" fill="var(--accent)"/>
+              <rect x="294" y="48" width="104" height="10" rx="5" fill="var(--cyan)"/>
+              <rect x="294" y="62" width="58" height="10" rx="5" fill="var(--green)"/>
+
+              <rect x="24" y="130" width="88" height="32" rx="10" fill="var(--purple)" opacity=".9"/>
+              <text x="68" y="151" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">샘플 2</text>
+              <line x1="116" y1="146" x2="152" y2="146" class="ar"/>
+              <rect x="156" y="124" width="90" height="44" rx="11" class="nd-a"/>
+              <text x="201" y="151" font-size="11" font-weight="700" fill="var(--accent-ink)" text-anchor="middle">Assembly</text>
+              <line x1="250" y1="146" x2="286" y2="146" class="ar"/>
+              <text x="294" y="122" class="cap">Contig set 2</text>
+              <rect x="294" y="130" width="98" height="10" rx="5" fill="var(--purple)"/>
+              <rect x="294" y="144" width="62" height="10" rx="5" fill="var(--orange)"/>
+              <rect x="294" y="158" width="84" height="10" rx="5" fill="var(--pink)"/>
+
+              <rect x="24" y="226" width="88" height="32" rx="10" fill="var(--orange)" opacity=".9"/>
+              <text x="68" y="247" font-size="11" fill="#fff" text-anchor="middle" font-weight="600">샘플 N</text>
+              <line x1="116" y1="242" x2="152" y2="242" class="ar"/>
+              <rect x="156" y="220" width="90" height="44" rx="11" class="nd-a"/>
+              <text x="201" y="247" font-size="11" font-weight="700" fill="var(--accent-ink)" text-anchor="middle">Assembly</text>
+              <line x1="250" y1="242" x2="286" y2="242" class="ar"/>
+              <text x="294" y="218" class="cap">Contig set N</text>
+              <rect x="294" y="226" width="66" height="10" rx="5" fill="var(--pink)"/>
+              <rect x="294" y="240" width="110" height="10" rx="5" fill="var(--green)"/>
+              <rect x="294" y="254" width="48" height="10" rx="5" fill="var(--cyan)"/>
+
+              <line x1="430" y1="50" x2="558" y2="118" stroke="var(--ink-3)" stroke-width="1.4" stroke-dasharray="4 4"/>
+              <line x1="430" y1="146" x2="558" y2="140" stroke="var(--ink-3)" stroke-width="1.4" stroke-dasharray="4 4"/>
+              <line x1="430" y1="242" x2="558" y2="162" stroke="var(--ink-3)" stroke-width="1.4" stroke-dasharray="4 4"/>
+              <circle cx="598" cy="140" r="30" fill="none" stroke="var(--red)" stroke-width="3"/>
+              <rect x="580" y="135" width="36" height="10" rx="5" fill="var(--red)" transform="rotate(-45 598 140)"/>
+              <text x="598" y="196" font-size="12.5" font-weight="700" fill="var(--red)" text-anchor="middle">샘플 간 DEG 불가</text>
+              <text x="598" y="214" class="cap" text-anchor="middle">각 샘플 개별 결과만 확인</text>
+            </svg>
+          </div>
+
+          <div class="note danger">
+            <span class="lbl">반드시 확인</span>
+            <p>이 방식은 샘플마다 기준 서열이 달라지므로 <strong>샘플 간 발현량 비교 및 DEG 분석이 원천적으로 불가능</strong>합니다. DEG가 목적이라면 A-1 또는 A-2를 선택해야 합니다.</p>
+          </div>
+
+          <ul class="pts">
+            <li>각 샘플에 <strong>특이적인 model 서열</strong>을 build할 수 있음</li>
+            <li>샘플별 조립 결과를 독립적으로 확인·활용해야 하는 목적에 적합</li>
+          </ul>
+
+          <div class="note ok" style="margin-top:1.1rem">
+            <span class="lbl">추천 상황</span>
+            <p>샘플별 특성이 크게 다른 경우, 또는 각 샘플별로 나누어 결과를 확인해야 하는 경우</p>
+          </div>
+          <p class="sub-h">적용 예시</p>
+          <div class="ex"><span class="n">예시 1</span><div>각 샘플에 존재할 것으로 예상되는 <strong>virus 서열을 개별 탐색</strong>하고 싶은 경우</div></div>
+        </div>
+      </section>
+
+      <!-- ===================== 4. [B] ===================== -->
+      <section>
+        <div class="sec-head"><span class="sec-num">4</span><p class="kicker">Category B</p></div>
+        <h2>[B] Assemble 결과를 재활용하는 경우</h2>
+        <p>기존 조립 결과(Contig set)와 annotation을 <strong>그대로 고정</strong>하고, 각 샘플의 <strong>quantification(expression profiling) 과정만</strong> 다시 진행합니다. 조립·annotation을 재수행하지 않으므로 분석 시간이 크게 단축됩니다.</p>
+
+        <figure>
+          <p class="scroll-hint">← 좌우 스크롤</p>
+          <div class="fig-scroll">
+          <svg class="dg" viewBox="0 0 700 240" role="img" aria-label="B 재활용 방식 흐름">
+            <text x="20" y="26" class="lbl">기존 분석 결과 디렉토리</text>
+            <rect x="20" y="34" width="182" height="96" rx="13" class="nd" stroke-dasharray="5 4"/>
+            <text x="34" y="54" font-size="10" font-weight="700" fill="var(--accent-ink)">Contig set (고정) 🔒</text>
+            <rect x="34" y="60" width="98" height="10" rx="5" fill="var(--accent)"/>
+            <rect x="34" y="74" width="134" height="10" rx="5" fill="var(--cyan)"/>
+            <rect x="34" y="88" width="76" height="10" rx="5" fill="var(--green)"/>
+            <rect x="34" y="104" width="134" height="20" rx="8" fill="var(--card)" stroke="var(--line)"/>
+            <text x="101" y="118" font-size="9.5" fill="var(--ink-2)" text-anchor="middle" font-weight="600">Annotation 재사용</text>
+
+            <rect x="20" y="150" width="182" height="72" rx="13" class="nd"/>
+            <text x="34" y="170" font-size="10" font-weight="600" fill="var(--ink-2)">기존 샘플</text>
+            <rect x="34" y="176" width="60" height="16" rx="8" fill="var(--ink-3)" opacity=".5"/>
+            <rect x="98" y="176" width="60" height="16" rx="8" fill="var(--ink-3)" opacity=".5"/>
+            <text x="34" y="212" font-size="10" font-weight="700" fill="var(--accent-ink)">＋ 새 샘플</text>
+            <rect x="98" y="200" width="60" height="16" rx="8" fill="var(--accent)"/>
+            <rect x="162" y="200" width="26" height="16" rx="8" fill="var(--accent)" opacity=".6"/>
+
+            <path d="M206,82 L242,82 L242,116" class="ar"/>
+            <path d="M206,186 L242,186 L242,152" class="ar"/>
+            <rect x="256" y="106" width="140" height="56" rx="13" class="nd-a"/>
+            <text x="326" y="129" class="ttl" fill="var(--accent-ink)" text-anchor="middle">Quantification</text>
+            <text x="326" y="146" class="cap" text-anchor="middle">정량 과정만 수행</text>
+
+            <line x1="400" y1="134" x2="436" y2="134" class="ar"/>
+            <rect x="440" y="98" width="244" height="72" rx="13" fill="var(--green-soft)" stroke="none"/>
+            <text x="562" y="122" font-size="12.5" font-weight="700" fill="var(--green)" text-anchor="middle">✓ DEG 분석 가능</text>
+            <text x="562" y="141" class="cap" text-anchor="middle">샘플군 추가·변경되어도 동일 기준 유지</text>
+            <text x="562" y="157" class="cap" text-anchor="middle">분석 시간 대폭 단축</text>
+
+            <rect x="256" y="186" width="428" height="34" rx="10" fill="var(--orange-soft)" stroke="none"/>
+            <text x="470" y="207" font-size="10.5" font-weight="700" fill="var(--orange)" text-anchor="middle">주의 — 새 샘플에서만 특이적으로 발현되는 contig는 누락됨</text>
+          </svg>
+          </div>
+          <figcaption>Contig set이 고정되므로 <strong>샘플군이 추가·변경되어도 기존 결과와 동일한 기준으로 DEG 분석이 가능</strong>합니다.</figcaption>
+        </figure>
+
+        <p class="sub-h">특성</p>
+        <ul class="pts">
+          <li><strong>assemble·annotation 재진행 불필요</strong> — 분석 시간이 크게 단축됨</li>
+          <li>기존 결과물을 이용해 각 샘플별 <strong>quantification(＝expression profiling)만</strong> 진행</li>
+          <li>Contig set이 고정되므로 <strong>샘플군이 추가·변경되어도 DEG 분석 가능</strong></li>
+          <li class="warn"><strong>전제 조건</strong> — 기존에 진행한 분석 결과의 <strong>전체 directory가 온전히 보존</strong>되어 있어야 진행 가능</li>
+          <li class="warn">새로 추가된 샘플군에서만 특이적으로 발현되는 contig는 <strong>누락</strong>됨</li>
+          <li class="warn">새 샘플이 기존 조립에 없는 서열을 많이 가질 경우 <strong>mapping rate가 저하</strong>될 수 있으므로 정량 신뢰도 QC 확인 필요</li>
+        </ul>
+
+        <div class="note ok" style="margin-top:1.1rem">
+          <span class="lbl">추천 상황</span>
+          <p>Contig set을 고정하고 싶은 경우, 기존 결과와의 <strong>통일성이 필요한 경우</strong></p>
+          <p style="margin-top:.45rem">동일 샘플군으로 재조립해도 난수 요소로 Contig set이 달라지므로, <strong>재현성·일관성 확보에는 이 방식이 유일한 선택</strong>입니다.</p>
+        </div>
+      </section>
+
+      <!-- ===================== 5. 비교 ===================== -->
+      <section>
+        <div class="sec-head"><span class="sec-num">5</span><p class="kicker">Comparison</p></div>
+        <h2>방식별 한눈에 비교</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>구분</th>
+                <th>A-1<span class="sub">전체 샘플</span></th>
+                <th>A-2<span class="sub">일부 샘플</span></th>
+                <th>A-3<span class="sub">샘플별 개별</span></th>
+                <th>B<span class="sub">결과 재활용</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th>Contig set 개수</th><td>1개 (통합)</td><td>1개 (대표 기준)</td><td>샘플 수만큼</td><td>1개 (기존 고정)</td></tr>
+              <tr><th>샘플 간 DEG</th><td class="yes">가능</td><td class="yes">가능</td><td class="no-c">불가</td><td class="yes">가능</td></tr>
+              <tr><th>신규·특이 서열 탐색</th><td class="yes">전 샘플 반영</td><td class="par">group 내만</td><td class="yes">샘플별 반영</td><td class="no-c">불가</td></tr>
+              <tr><th>분석 시간</th><td>가장 김</td><td>중간</td><td>중간</td><td class="yes">가장 짧음</td></tr>
+              <tr><th>샘플 추가·변경</th><td>전체 재분석</td><td>전체 재분석</td><td>전체 재분석</td><td class="yes">자유</td></tr>
+              <tr><th>전제 조건</th><td>—</td><td>대표 샘플 선정</td><td>—</td><td>기존 결과 디렉토리 보존</td></tr>
+              <tr><th>추천 상황</th><td>전체 DEG 분석</td><td>Control·대표 집단 존재</td><td>샘플별 특이 서열 탐색</td><td>기준 고정·결과 통일성</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===================== 6. 체크리스트 ===================== -->
+      <section>
+        <div class="sec-head"><span class="sec-num">6</span><p class="kicker">Checklist</p></div>
+        <h2>분석 요청 전 확인 사항</h2>
+        <div class="check">
+          <div class="ck"><span class="box">✓</span><div><strong>비교(DEG)할 샘플을 모두 확정했는가</strong> — 함께 비교할 샘플은 반드시 하나의 분석 건으로 함께 요청해야 합니다. 나중에 추가하면 [B] 방식 외에는 전체 재분석이 필요합니다.</div></div>
+          <div class="ck"><span class="box">✓</span><div><strong>Reference 보유 여부를 확인했는가</strong> — genome fasta와 gene annotation(gff/gff3) 중 하나라도 없으면 de novo로 진행합니다.</div></div>
+          <div class="ck"><span class="box">✓</span><div><strong>Assembly group을 어떻게 설정할지 정했는가</strong> — 전체(A-1) / 일부(A-2) / 샘플별(A-3). DEG가 목적이면 A-3는 선택할 수 없습니다.</div></div>
+          <div class="ck"><span class="box">✓</span><div><strong>샘플 간 이질성이 큰가</strong> — metagenome 등 특성 차이가 큰 샘플군은 조립 품질 저하가 예상되므로 사전 협의가 필요합니다.</div></div>
+          <div class="ck"><span class="box">✓</span><div><strong>기존 분석 결과 디렉토리가 보존되어 있는가</strong> — [B] 재활용 방식은 결과 전체 디렉토리가 있어야만 진행 가능합니다.</div></div>
+        </div>
+      </section>
+
+      <footer>
+        Trinity 기반 de novo 파이프라인 흐름(reads → assembly → contig set → alignment → quantification)을 기준으로 작성되었습니다. Assembly group 설정은 데이터 생산 전 확정을 권장합니다.
+      </footer>
+
+    </div>
+  </div>
+  </div>
+</div>
+
+
+<script>
+(function(){
+  var root=document.documentElement;
+  var mq=window.matchMedia('(min-width:1181px)');
+  var userSet=false;
+  function isOpen(){return root.getAttribute('data-toc')==='open';}
+  function setOpen(v){userSet=true;root.setAttribute('data-toc',v?'open':'closed');}
+  function applyDefault(){if(!userSet)root.setAttribute('data-toc',mq.matches?'open':'closed');}
+  applyDefault();
+  if(mq.addEventListener){mq.addEventListener('change',applyDefault);}else if(mq.addListener){mq.addListener(applyDefault);}
+
+  Array.prototype.forEach.call(document.querySelectorAll('.toc-btn'),function(b){b.addEventListener('click',function(){setOpen(!isOpen());});});
+  Array.prototype.forEach.call(document.querySelectorAll('.toc-close'),function(b){b.addEventListener('click',function(){setOpen(false);});});
+  var backdrop=document.getElementById('tocBackdrop');
+  if(backdrop){backdrop.addEventListener('click',function(){setOpen(false);});}
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!mq.matches&&isOpen()){setOpen(false);}});
+
+  /* ---- build TOC from sections ---- */
+  var list=document.getElementById('tocList');
+  if(list){
+    var sections=Array.prototype.slice.call(document.querySelectorAll('.content > section'));
+    var entries=[];
+    sections.forEach(function(sec,i){
+      var h2=sec.querySelector('h2');
+      if(!h2){return;}
+      if(!sec.id){sec.id='sec-'+(i+1);}
+      var numEl=sec.querySelector('.sec-num');
+      var num=numEl?numEl.textContent.trim():String(i+1);
+      var h3s=Array.prototype.slice.call(sec.querySelectorAll('h3'));
+
+      var item=document.createElement('div');item.className='toc-item';
+      var row=document.createElement('div');row.className='toc-row';
+      var expandBtn=null;
+      if(h3s.length){
+        expandBtn=document.createElement('button');
+        expandBtn.type='button';expandBtn.className='toc-expand';expandBtn.setAttribute('aria-label','하위 항목 펼치기');
+        expandBtn.innerHTML='<svg width="9" height="9" viewBox="0 0 10 10"><path d="M2,1 L8,5 L2,9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+        row.appendChild(expandBtn);
+      }else{
+        var sp=document.createElement('span');sp.className='toc-expand-spacer';row.appendChild(sp);
+      }
+      var a=document.createElement('a');a.className='toc-link';a.href='#'+sec.id;
+      a.innerHTML='<span class="toc-num">'+num+'</span><span>'+h2.textContent.trim()+'</span>';
+      row.appendChild(a);
+      item.appendChild(row);
+      entries.push({a:a,target:sec});
+
+      if(h3s.length){
+        var sub=document.createElement('ul');sub.className='toc-sub';
+        h3s.forEach(function(h3,j){
+          if(!h3.id){h3.id=sec.id+'-'+(j+1);}
+          var li=document.createElement('li');li.className='toc-subitem';
+          var sa=document.createElement('a');sa.href='#'+h3.id;sa.textContent=h3.textContent.trim();
+          li.appendChild(sa);sub.appendChild(li);
+          entries.push({a:sa,target:h3});
+        });
+        item.appendChild(sub);
+        expandBtn.addEventListener('click',function(){
+          var open=sub.classList.toggle('open');
+          expandBtn.classList.toggle('open',open);
+        });
+      }
+      list.appendChild(item);
+    });
+
+    list.addEventListener('click',function(e){
+      var a=e.target.closest?e.target.closest('a'):null;
+      if(!a){return;}
+      e.preventDefault();
+      var id=a.getAttribute('href').slice(1);
+      var target=document.getElementById(id);
+      if(target){target.scrollIntoView({behavior:'smooth',block:'start'});}
+      if(!mq.matches){setOpen(false);}
+    });
+
+    if('IntersectionObserver' in window){
+      var io=new IntersectionObserver(function(list_){
+        list_.forEach(function(en){
+          var m=null;
+          for(var k=0;k<entries.length;k++){if(entries[k].target===en.target){m=entries[k];break;}}
+          if(!m){return;}
+          if(en.isIntersecting){
+            entries.forEach(function(e){e.a.classList.remove('active');});
+            m.a.classList.add('active');
+            var subUl=m.a.closest('ul.toc-sub');
+            if(subUl && !subUl.classList.contains('open')){
+              subUl.classList.add('open');
+              var prevItem=subUl.parentElement;
+              var btn=prevItem?prevItem.querySelector('.toc-expand'):null;
+              if(btn){btn.classList.add('open');}
+            }
+          }
+        });
+      },{rootMargin:'-15% 0px -70% 0px',threshold:0});
+      sections.forEach(function(s){io.observe(s);});
+    }
+  }
+
+  /* ---- copy buttons for code blocks ---- */
+  function legacyCopy(text){
+    var ta=document.createElement('textarea');
+    ta.value=text;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.top='-9999px';ta.style.left='-9999px';
+    document.body.appendChild(ta);ta.select();ta.setSelectionRange(0,text.length);
+    var ok=false;
+    try{ok=document.execCommand('copy');}catch(e){ok=false;}
+    document.body.removeChild(ta);
+    return ok;
+  }
+  var ICON_COPY='<svg class="i-cp" width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5.2" y="5.2" width="8.3" height="8.3" rx="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M2.7 10.2V3.7A1.5 1.5 0 0 1 4.2 2.2h6" stroke="currentColor" stroke-width="1.3"/></svg><span>복사</span>';
+  var ICON_DONE='<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 8.3l3.3 3.3L13 4.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>복사됨</span>';
+  Array.prototype.forEach.call(document.querySelectorAll('.termwin'),function(win){
+    var bar=win.querySelector('.termbar');
+    var pre=win.querySelector('pre.term');
+    if(!bar||!pre){return;}
+    var btn=document.createElement('button');
+    btn.type='button';btn.className='term-copy';btn.setAttribute('aria-label','코드 복사');
+    btn.innerHTML=ICON_COPY;
+    bar.appendChild(btn);
+    btn.addEventListener('click',function(){
+      var text=pre.textContent.replace(/\n$/,'');
+      var done=function(){
+        btn.classList.add('copied');
+        btn.innerHTML=ICON_DONE;
+        setTimeout(function(){btn.classList.remove('copied');btn.innerHTML=ICON_COPY;},1600);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+        navigator.clipboard.writeText(text).then(done).catch(function(){legacyCopy(text);done();});
+      }else{
+        legacyCopy(text);done();
+      }
+    });
+  });
+})();
+</script>
