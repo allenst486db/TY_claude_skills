@@ -37,6 +37,7 @@
 | 스킬 | 설명 |
 |---|---|
 | [`mosikdo-guide`](./mosikdo-guide) | macOS 스타일 HTML 가이드 문서 + 인라인 SVG 모식도 디자인 시스템. 좌측 목차(접기/펼치기, 클릭 이동)와 코드블록 복사 버튼 기본 내장 ([상세](./mosikdo-guide/references/toc-and-copy.md)) |
+| [`release-note-docx`](./release-note-docx) | 버전별 갱신 이력을 담은 Word(.docx) 릴리스 노트 빌더. 개요(제목·메타·요약 표)와 버전별 상세(큰 버전 헤더·색상 라벨 불릿·비교표)를 결합한 docx-js 라이브러리 ([상세](./release-note-docx/references/style-spec.md)) |
 
 각 스킬은 `<skill-name>/SKILL.md` 구조를 가집니다.
 
