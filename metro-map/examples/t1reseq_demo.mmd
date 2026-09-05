@@ -1,0 +1,65 @@
+%%metro title: T1_Reseq
+%%metro style: light
+%%metro animate: true
+%%metro legend: bl
+%%metro line: hisat_stringtie | Mapper: HISAT2, Quantification: StringTie (default) | #2db572
+%%metro line: hisat_cufflinks | Mapper: HISAT2, Quantification: Cufflinks | #0570b0
+%%metro line: star_stringtie | Mapper: STAR, Quantification: StringTie | #f5c542
+%%metro line: star_rsem | Mapper: STAR, Quantification: RSEM | #ff8c00
+%%metro line: tophat_cufflinks | Mapper: TopHat, Quantification: Cufflinks | #e63946
+%%metro line: optional | Optional: novel / variant_call / fusion (default: no) | #9e9e9e | dashed
+%%metro file: fastq | FASTQ
+%%metro file: xlsx | XLSX
+
+graph LR
+    subgraph pre [Pre-processing]
+        %%metro exit: right | hisat_stringtie, hisat_cufflinks, star_stringtie, star_rsem, tophat_cufflinks
+        fastq[FASTQ]
+        fastqstat[FastQstat]
+        rnaqc[RNAQC]
+        trimmomatic[Trimmomatic]
+        fastqc[FastQC]
+        fastq -->|hisat_stringtie,hisat_cufflinks,star_stringtie,star_rsem,tophat_cufflinks| fastqstat
+        fastqstat -->|hisat_stringtie,hisat_cufflinks,star_stringtie,star_rsem,tophat_cufflinks| rnaqc
+        rnaqc -->|hisat_stringtie,hisat_cufflinks,star_stringtie,star_rsem,tophat_cufflinks| trimmomatic
+        trimmomatic -->|hisat_stringtie,hisat_cufflinks,star_stringtie,star_rsem,tophat_cufflinks| fastqc
+    end
+
+    subgraph align [Genome alignment & quantification]
+        hisat2[HISAT2]
+        star[STAR]
+        tophat[TopHat]
+        stringtie[StringTie]
+        cufflinks[Cufflinks]
+        rsem[RSEM]
+        hisat2 -->|hisat_stringtie| stringtie
+        hisat2 -->|hisat_cufflinks| cufflinks
+        star -->|star_stringtie| stringtie
+        star -->|star_rsem| rsem
+        tophat -->|tophat_cufflinks| cufflinks
+    end
+
+    subgraph opt [Optional modules]
+        novel[Novel StringTie]
+        gatk[GATK4]
+        arriba[Arriba]
+        novel -->|optional| gatk
+        gatk -->|optional| arriba
+    end
+
+    subgraph report [Statistics & reporting]
+        makestats[makeStatistics]
+        runresult[runResult*]
+        xlsx[XLSX]
+        makestats -->|hisat_stringtie,hisat_cufflinks,star_stringtie,star_rsem,tophat_cufflinks,optional| runresult
+        runresult -->|hisat_stringtie,hisat_cufflinks,star_stringtie,star_rsem,tophat_cufflinks,optional| xlsx
+    end
+
+    fastqc -->|hisat_stringtie,hisat_cufflinks| hisat2
+    fastqc -->|star_stringtie,star_rsem| star
+    fastqc -->|tophat_cufflinks| tophat
+    stringtie -->|hisat_stringtie,star_stringtie| makestats
+    cufflinks -->|hisat_cufflinks,tophat_cufflinks| makestats
+    rsem -->|star_rsem| makestats
+    stringtie -->|optional| novel
+    arriba -->|optional| makestats
