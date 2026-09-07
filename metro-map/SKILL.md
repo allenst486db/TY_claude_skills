@@ -14,6 +14,8 @@ description: 파이프라인/워크플로우를 nf-core 스타일 지하철 노�
 python -m nf_metro --version || pip install nf-metro
 ```
 
+참조 문서는 **2.0** 기준이다. 1.x가 깔려 있으면 `group:` `marker:` `caption:` `--inactive-lines` 같은 2.0 디렉티브·플래그가 경고와 함께 무시된다 — `pip install -U nf-metro`.
+
 Windows + 한글 라벨이면 **반드시** `PYTHONUTF8=1`을 붙인다 (없으면 cp949 UnicodeDecodeError):
 
 ```bash
@@ -74,11 +76,13 @@ PYTHONUTF8=1 python -m nf_metro render map.mmd -o map.svg --animate
 PYTHONUTF8=1 python -m nf_metro validate-svg map.svg --geometry   # 라벨 위로 선이 지나가는지
 ```
 
-렌더 후 **반드시 눈으로 확인한다** (브라우저 pane 또는 SendUserFile). 확인 포인트: 노선이 끊기지 않았는지, 라벨 겹침, 섹션 배치.
+렌더 후 **반드시 눈으로 확인한다** (브라우저 pane 또는 SendUserFile). 로컬 파일 SVG는 브라우저 pane에서 스크린샷이 안 잡히므로, 직접 눈으로 봐야 할 땐 PNG로 굽는다 — `--mode light --no-chrome-css`로 렌더한 뒤 macOS면 `qlmanage -t -s 1600 -o . map.svg` (래스터라이저는 `var()`를 못 읽는다). 확인 포인트: 노선이 끊기지 않았는지, 라벨 겹침, 섹션 배치.
 
 레이아웃이 어긋나면 이 순서로 조정: `--line-spread centered|rails` → `--x-spacing/--y-spacing` → `--fold-threshold` → 마지막에 `%%metro grid:` 수동 고정.
 
 ## 4. 선택: 하단 명령어 패널
+
+출처·부연 한 줄이면 `%%metro caption:`으로 충분하고, 역 묶음 설명은 `%%metro group:`이 있다. 아래는 그걸로 안 되는 여러 줄 커맨드 패널일 때만.
 
 참조 도면처럼 "Example commands" 블록을 붙이려면, 렌더된 SVG의 `</svg>` 앞에 직접 `<rect>`+`<text>`를 추가한다 (nf-metro 기능 아님). 캔버스가 모자라면 `--height`로 여백을 먼저 확보한다. 폰트는 본문 `'Helvetica Neue', Helvetica, Arial, sans-serif`, 명령어는 `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` 9.5px.
 
