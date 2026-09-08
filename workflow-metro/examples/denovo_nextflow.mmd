@@ -37,10 +37,14 @@ graph LR
         %%metro entry: left | animal,plant,bacteria,archaea,virus
         %%metro exit: right | animal,plant,bacteria,archaea,virus
         merge[merge (all or subset)]
+        nomerge[no merge]
+        %%metro off_track: nomerge
         trinity[Trinity]
         unigene[CD-HIT-EST]
         fastqc -->|animal,plant,bacteria,archaea,virus| merge
         merge -->|animal,plant,bacteria,archaea,virus| trinity
+        fastqc -->|animal,plant,bacteria,archaea,virus| nomerge
+        nomerge -->|animal,plant,bacteria,archaea,virus| trinity
         trinity -->|animal,plant,bacteria,archaea,virus| unigene
     end
 

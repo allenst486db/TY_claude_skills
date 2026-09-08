@@ -13,10 +13,15 @@ description: 파이프라인/워크플로우를 nf-core 스타일 지하철 노�
 ## 0. 설치와 버전
 
 ```bash
-python -m nf_metro --version || pip install nf-metro
+pip install "nf-metro==0.7.2"      # 버전을 반드시 고정한다
 ```
 
-**이 문서는 실제 동작을 확인한 0.7.2 기준이다.** 이전 판 문서에 있던
+**이 문서는 실제 동작을 확인한 0.7.2 기준이고, 예제 도면도 전부 0.7.2 로 렌더했다.**
+PyPI 에는 1.0.0 · 1.1.0 · **2.0.0**(2026-09-05) 도 올라와 있다 — 버전을 안 고정하면
+`pip install nf-metro` 가 2.0.0 을 가져와 **배치가 통째로 달라진다.** 2.0 은 아직 확인하지 않았다
+(확인한 것 하나: `off_track` 은 2.0 에서도 위로만 올린다).
+
+이전 판 문서에 있던
 `%%metro animate:` `%%metro caption:` `%%metro group:` `%%metro marker:`,
 `validate-svg` 서브커맨드, `--line-spread` `--fold-threshold` `--inactive-lines`
 `--mode` `--no-chrome-css` 플래그는 **0.7.2에 없다.** 쓰면 조용히 무시되거나 에러가 난다.
@@ -182,20 +187,16 @@ nf-metro 는 **모든 공에 같은 `dur` 을 주고 `keyTimes` 로 실제 이�
 갈렸다 합류시킨다. 색이 바뀌면 다른 갈래가 시작된 것처럼 보인다.
 
 **"하거나 안 하거나" 는 역 하나를 두고 그 역을 지나치는 우회로를 그린다.**
-`merge 안 함` 같은 역을 따로 만들면 하지 않는 일에 이름을 붙이게 되고 역만 늘어난다.
+그리고 그 우회로는 **nf-metro 가 그리게 한다** — 방법은 §6-1b 에 있다.
 
-**nf-metro 로는 이 그림이 안 나온다.** 세 가지를 다 해 봤다.
+한 번 헛짚었던 것을 남겨 둔다. `A→M→B` 와 `A→B` 를 같은 노선에 함께 걸면
+"한 노선은 한 경로만 지난다" 고 판단하고 손으로 호를 그리는 코드(`--bypass`)를 만들었는데,
+**틀렸다.** nf-metro 는 갈렸다 합류하는 노선을 그대로 그린다 — 트림 도구 택일 갈래가
+바로 그것이고, 같은 문법이 우회로에도 통한다. 그때 관찰한 "합류점이 한가운데로 처진다" 는
+사실이지만, 우회 쪽 역에 `off_track:` 을 주면 사라진다.
 
-| 시도 | 결과 |
-|---|---|
-| 같은 노선에 `A→M→B` 와 `A→B` 를 함께 건다 | 한 노선은 한 경로만 지난다. 한쪽만 그려지고 우회로는 사라진다 |
-| 양쪽에 역을 두어 다이아몬드로 만든다 | 그려지긴 하지만 **합류점이 본선 아래로 내려가** 뒤 구간 전체가 한 칸 처진다 |
-| `off_track:` 로 역을 띄운다 | 부풀긴 하는데 항상 위로만 가고, 역시 뒤 구간이 처진다 |
-
-그래서 **직선으로 렌더한 뒤 우회로만 얹는다** — `postprocess_svg.py --bypass 역id:라벨[:반폭:높이]`.
-그 역을 가로지르는 수평 선분에서 노선별 레일 y 를 읽어 같은 간격으로 위로 부풀린 곡선을
-노선 색마다 하나씩 그리고, 역 글리프는 만들지 않는다. 역 라벨은 아래로 내려 자리를 비운다.
-본선은 손대지 않으므로 뒤 구간이 처지지 않는다.
+손으로 그린 호는 **비례를 아무리 맞춰도 옆 갈래와 미묘하게 다르고 바로 티가 난다.**
+`--bypass` 는 호환을 위해 남겨는 뒀지만 쓰지 마라.
 
 ## 6-1. 한 영역 안에서 하위 묶음은 음영으로
 
@@ -209,24 +210,43 @@ nf-metro 는 **모든 공에 같은 `dur` 을 주고 `keyTimes` 로 실제 이�
 역이 하나뿐인 묶음은 세로 이름이 음영보다 길어진다. 이름 길이만큼 음영 높이를 늘리고,
 `--y-spacing` 을 넉넉히(90~110) 줘서 옆 묶음과 붙지 않게 한다.
 
-## 6-1b. 공이 안 지나는 갈래
+## 6-1b. 우회로, 그리고 공이 안 지나는 갈래
 
 `--animate` 는 노선마다 몇 개의 경로에만 공을 붙인다. 분기가 많으면 **한 번도 공이 지나지 않는
-갈래**가 생긴다. 내가 직접 그린 우회로도 마찬가지다(nf-metro 가 모르는 경로다).
+갈래**가 생긴다.
 
 **조각만 이어 붙이면 안 된다.** 그 구간만 잘라 공을 태우면 그 자리에서 공이 갑자기
 생겨난 것처럼 보인다. 갈림길에서 갈라져 나온 것처럼 보이려면 **출발점부터 이어진 전체 경로**를
 만들어야 한다. `build_route()` 가 그 노선의 선분들로 그래프를 만들고 시작점 → 대상 역 → 끝점
 경로를 BFS 로 찾아 d 를 이어 붙인다.
 
-**우회 호는 nf-metro 갈래와 같은 비례로 그려야 한다.** 자기가 그린 갈래만 모양이 다르면
-같은 도면 안에서 바로 티가 난다. nf-metro 는 `짧은 직진(8) → 가파른 사선(가로 26 · 세로 전체)
-→ 긴 평행 → 사선 → 직진` 으로, 꺾이는 점마다 반지름 10 의 2차 곡선을 넣는다.
-사선의 가로 폭을 키우거나 반폭을 좁히면 사선이 모서리 곡선에 먹혀 **뭉개진 덩어리**가 된다.
-깊이도 옆 갈래와 비슷하게 준다 (`--bypass 역:라벨:반폭:깊이[:down]`).
+**우회로는 손으로 그리지 말고 nf-metro 에게 그리게 한다.** 손으로 그린 호는 아무리
+비례를 맞춰도 옆 갈래와 미묘하게 다르고, 보는 사람은 그걸 바로 알아본다.
+`--bypass` 는 그래서 남겨는 뒀지만 **쓰지 마라.** 대신:
 
-`--animate-through 역id` 가 그 일을 한다. `--bypass` 도 자기가 그린 호를 그 전체 경로 가운데에
-갈아 끼운 뒤 공을 태운다. 어느 역이 비었는지는 motion path 좌표를 역 좌표와 대조해 확인한다.
+```
+merge[merge (all or subset)]
+nomerge[no merge]
+%%metro off_track: nomerge
+fastqc -->|animal,plant| merge
+merge  -->|animal,plant| trinity
+fastqc -->|animal,plant| nomerge      # 같은 노선이 두 갈래로 갈렸다가
+nomerge -->|animal,plant| trinity     # 다시 합류한다
+```
+
+한 노선이 두 경로로 갈라졌다 합류하는 것을 nf-metro 는 그대로 그린다 —
+트림 도구 택일 갈래와 **완전히 같은 모양**이 나온다. 여기에 두 가지가 필요하다:
+
+- **`off_track:` 이 없으면** 합류역(`trinity`)이 두 갈래의 **한가운데로 끌려 내려가** 본선이 휜다.
+  `off_track:` 을 주면 그 역만 위로 들리고 본선은 직선을 유지한다.
+- **`off_track:` 은 언제나 위로만 올린다** (0.7.2 · 2.0.0 둘 다 `off_track_y = box_top + padding`).
+  아래로 우회시키는 옵션은 없다. 아래로 보내야 한다면 본선 라벨을 역 아래로 내리는 편이
+  손으로 호를 그리는 것보다 낫다.
+- **우회로에는 정차역이 없어야 한다.** 그런데 역이 없으면 갈래 자체가 생기지 않는다.
+  역을 하나 두고 렌더한 뒤 `--no-marker 역id` 로 **표시만 지우면** 라벨이 선 위에 남는다.
+- 공은 `--animate-through 역id` 로 그 갈래에도 태운다.
+
+어느 역이 비었는지는 motion path 좌표를 역 좌표와 대조해 확인한다.
 
 ## 6-2. 영역을 쪼개면 우회 차선이 생긴다
 
@@ -257,3 +277,24 @@ BLAST DB 처럼 **서로 독립적으로 도는 것**을 한 줄로 이으면 �
 - 노선이 6~7개를 넘으면 범례와 역이 두꺼워져 읽기 힘들다 — 축을 다시 잡거나 지도를 나눈다.
 - 같은 HTML 문서에 지도를 둘 이상 인라인으로 넣으면 **id가 충돌해 두 번째 지도의 애니메이션이
   첫 번째 경로를 따라간다.** 지도마다 `id=` `href="#..."` `url(#...)` 에 접두사를 붙인다.
+
+
+## 8. 실제로 쓴 빌드 커맨드 (examples/denovo_*.mmd)
+
+```bash
+nf-metro render denovo_onprem.mmd -o raw.svg \
+  --theme light --animate --y-spacing 124 --x-spacing 88
+
+postprocess_svg.py raw.svg denovo_onprem.mmd -o denovo_onprem.svg \
+  --panel denovo_onprem_panel.json \
+  --split-label "merge::" --no-marker nomerge \
+  --animate-through kofam --animate-through nomerge \
+  --group "ORF prediction:transdecoder" --group "Assembly QC:busco" \
+  --group "Quantification:rsem" \
+  --group "Annotation:uniprot,pfam,eggnog,ko,nr,corent,virusdb" \
+  --group "Annotation via ORF:ipr,kofam" \
+  --order pre,asm,down,report --map-only denovo_onprem_map.svg
+```
+
+`--map-only` 는 커맨드 패널을 뺀 지도만 따로 낸다 (HTML 보고서에 넣는 판본).
+결과는 `ovl.py` 같은 라벨 겹침 검사로 **0 겹침**을 확인하고 넘긴다.

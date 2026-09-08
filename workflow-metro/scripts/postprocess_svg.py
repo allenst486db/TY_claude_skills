@@ -457,6 +457,19 @@ def split_label(svg: str, station: str, sep: str = " (",
     return svg[:m.start()] + "<text " + attrs + ">" + body + "</text>" + svg[m.end():], 1
 
 
+def drop_marker(svg: str, station: str) -> tuple[str, int]:
+    """역의 동그라미(사각형)만 지우고 라벨은 남긴다.
+
+    우회로에는 정차역이 없다. 그런데 nf-metro 로 우회로를 그리려면 그 갈래에
+    역이 하나 있어야 한다 — 역이 없으면 갈래 자체가 생기지 않는다.
+    그래서 역을 하나 두고 렌더한 뒤, 여기서 표시만 지운다.
+    라벨은 남으므로 "선에 붙은 이름" 으로 읽힌다.
+    """
+    pat = r'<rect[^>]*data-station-id="%s"[^>]*/>\s*' % station
+    svg2, n = re.subn(pat, "", svg)
+    return svg2, n
+
+
 # ── 11. 노선 전체 경로 만들기 ────────────────────────────────
 #
 # nf-metro 가 붙이는 공은 노선의 처음부터 출발한다. 뒤늦게 공을 하나 얹으면
@@ -770,6 +783,8 @@ def main() -> None:
                     help="역id[:구분자] — 역 이름을 두 줄로 쪼갠다 (기본 구분자 \" (\").")
     ap.add_argument("--group", action="append", default=[],
                     help="라벨:역id1,역id2,... — 한 영역 안에서 같은 성격의 역을 옅은 음영으로 묶는다.")
+    ap.add_argument("--no-marker", action="append", default=[], dest="no_marker",
+                    metavar="역id", help="역 표시만 지우고 라벨은 남긴다 (우회로용)")
     ap.add_argument("--bypass", action="append", default=[],
                     help="역id:라벨[:반폭:높이] — 그 역을 건너뛰는 우회로를 본선 위에 그린다.")
     ap.add_argument("--mirror-line", action="append", default=[],
@@ -816,6 +831,11 @@ def main() -> None:
         svg, k = draw_bypass(svg, st, lab, cols, ids, hw, hh, dn)
         n_by += k
 
+    n_nm = 0
+    for sid in a.no_marker:
+        svg, k = drop_marker(svg, sid)
+        n_nm += k
+
     n_mir = 0
     for spec in a.mirror_line:
         lid, _, sc = spec.partition(":")
@@ -836,7 +856,8 @@ def main() -> None:
 
     a.output.write_text(svg, encoding="utf-8")
     print(f"{a.output}: 원 {n_balls}개 채색 · 속도 {a.speedup}배 · "
-          f"영역번호 {n_sec}개 · 묶음 {n_grp}개 · 우회 {n_by}선 · 추가공 {n_thr}개 · 커맨드 {n_cmd}항목")
+          f"영역번호 {n_sec}개 · 묶음 {n_grp}개 · 우회 {n_by}선 · 역표시제거 {n_nm}개 · "
+          f"추가공 {n_thr}개 · 커맨드 {n_cmd}항목")
 
 
 if __name__ == "__main__":
