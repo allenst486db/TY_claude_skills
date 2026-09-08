@@ -62,7 +62,7 @@
         "cat ${r1} > ${group}_1.fastq",
         "cat ${r2} > ${group}_2.fastq"
       ],
-      "note": "샘플이 1개인 그룹은 branch 로 걸러 프로세스 자체를 건너뜁니다 (원본의 ln -s 에 해당)."
+      "note": "도면에서는 merge 를 본선 위로 부풀린 역으로 그렸습니다 — 병합하지 않는 실행은 그 역을 들르지 않고 본선으로 지나갑니다."
     },
     {
       "name": "TRINITY",
@@ -166,6 +166,48 @@
       ],
       "note": "원본은 이 단계가 실패해도 성공 플래그를 만든다 (runDenovoRNA.py:612-613).",
       "warn": true
+    }
+  ],
+  "colorize": [
+    {
+      "match": "uniprot_euk · _pro · _arc · _virus",
+      "segments": [
+        [
+          "uniprot",
+          null
+        ],
+        [
+          "_euk",
+          [
+            "#2db572",
+            "#0570b0"
+          ]
+        ],
+        [
+          " · ",
+          null
+        ],
+        [
+          "_pro",
+          "#c08a00"
+        ],
+        [
+          " · ",
+          null
+        ],
+        [
+          "_arc",
+          "#a05fb4"
+        ],
+        [
+          " · ",
+          null
+        ],
+        [
+          "_virus",
+          "#e63946"
+        ]
+      ]
     }
   ]
 }

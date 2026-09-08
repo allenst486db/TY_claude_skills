@@ -105,6 +105,53 @@ def renumber_sections(svg: str, order: list[str]) -> tuple[str, int]:
     return pat.subn(lambda m: m.group(1) + str(idx.get(m.group(2), 0)) + m.group(3), svg)
 
 
+# ── 5. 역 라벨 부분 채색 ──────────────────────────────────────
+def colorize_labels(svg: str, rules: list[dict]) -> tuple[str, int]:
+    """역 라벨의 일부 글자만 다른 색으로 칠한다.
+
+    DB 이름을 `uniprot_euk · _pro · _arc · _virus` 처럼 한 역에 모아 놓고
+    접미사만 그 DB 를 쓰는 노선 색으로 칠하면, 역을 넷으로 쪼개지 않고도
+    "어느 종이 어느 DB 를 쓰는지" 가 읽힌다.
+
+    rules: [{"match": "<라벨 전체>",
+             "segments": [["uniprot", null], ["_euk", "#2db572"],
+                          ["_pro", ["#f5c542", "#b8860b"]]]}]
+    색 자리에 두 개짜리 리스트를 주면 그라디언트를 만든다 (두 노선이 같은 DB 를 쓸 때).
+    """
+    n = 0
+    defs: list[str] = []
+    for gi, rule in enumerate(rules):
+        label = rule["match"]
+        pat = re.compile(r'(<text\b[^>]*>)' + re.escape(escape(label)) + r'(</text>)')
+        m = pat.search(svg)
+        if not m:
+            pat = re.compile(r'(<text\b[^>]*>)' + re.escape(label) + r'(</text>)')
+            m = pat.search(svg)
+        if not m:
+            continue
+        spans = []
+        for si, (text, color) in enumerate(rule["segments"]):
+            if not color:
+                spans.append(escape(text))
+                continue
+            if isinstance(color, (list, tuple)):
+                gid = f"seg-grad-{gi}-{si}"
+                stops = "".join(
+                    f'<stop offset="{o}" stop-color="{c}"/>'
+                    for o, c in zip(("0%", "100%"), color)
+                )
+                defs.append(f'<linearGradient id="{gid}" x1="0" y1="0" x2="1" y2="0">{stops}</linearGradient>')
+                fill = f"url(#{gid})"
+            else:
+                fill = color
+            spans.append(f'<tspan fill="{fill}" font-weight="700">{escape(text)}</tspan>')
+        svg = svg[:m.start()] + m.group(1) + "".join(spans) + m.group(2) + svg[m.end():]
+        n += 1
+    if defs:
+        svg = svg.replace("<defs>", "<defs>\n" + "\n".join(defs), 1)
+    return svg, n
+
+
 # ── 4. 커맨드 패널 ────────────────────────────────────────────
 def _measure(entries: list[dict]) -> float:
     h = 0.0
@@ -195,6 +242,12 @@ def main() -> None:
     svg, n_balls = recolor_balls(svg, parse_line_colors(a.mmd))
     svg = speed_up(svg, a.speedup)
 
+    n_col = 0
+    if a.panel:
+        _pj = json.loads(a.panel.read_text(encoding="utf-8"))
+        if _pj.get("colorize"):
+            svg, n_col = colorize_labels(svg, _pj["colorize"])
+
     n_sec = 0
     if a.order:
         svg, n_sec = renumber_sections(svg, [s.strip() for s in a.order.split(",") if s.strip()])
@@ -203,14 +256,13 @@ def main() -> None:
         a.map_only.write_text(svg, encoding="utf-8")
 
     n_cmd = 0
-    if a.panel:
-        panel = json.loads(a.panel.read_text(encoding="utf-8"))
-        n_cmd = len(panel.get("entries", []))
-        svg = append_panel(svg, panel)
+    if a.panel and _pj.get("entries"):
+        n_cmd = len(_pj["entries"])
+        svg = append_panel(svg, _pj)
 
     a.output.write_text(svg, encoding="utf-8")
     print(f"{a.output}: 원 {n_balls}개 채색 · 속도 {a.speedup}배 · "
-          f"영역번호 {n_sec}개 · 커맨드 {n_cmd}항목")
+          f"영역번호 {n_sec}개 · 라벨 {n_col}개 · 커맨드 {n_cmd}항목")
 
 
 if __name__ == "__main__":

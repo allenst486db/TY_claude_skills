@@ -48,7 +48,8 @@
         "그룹에 2개 이상 → cat {S1}_1.fastq {S2}_1.fastq > {G}_1.fastq",
         "1개 · 그룹명 ≠ 샘플명 → ln -s {S1}_1.fastq {G}_1.fastq",
         "1개 · 그룹명 = 샘플명 → 아무것도 하지 않음 (pass)"
-      ]
+      ],
+      "note": "도면에서는 merge 를 본선 위로 부풀린 역으로 그렸습니다 — 병합하지 않는 실행은 그 역을 들르지 않고 본선으로 지나갑니다."
     },
     {
       "name": "Trinity",
@@ -157,6 +158,48 @@
       ],
       "note": "실패해도 stat.annot.ok 를 만듭니다 — .error 자리에 .ok 가 들어가 있습니다 (runDenovoRNA.py:612-613).",
       "warn": true
+    }
+  ],
+  "colorize": [
+    {
+      "match": "uniprot_euk · _pro · _arc · _virus",
+      "segments": [
+        [
+          "uniprot",
+          null
+        ],
+        [
+          "_euk",
+          [
+            "#2db572",
+            "#0570b0"
+          ]
+        ],
+        [
+          " · ",
+          null
+        ],
+        [
+          "_pro",
+          "#c08a00"
+        ],
+        [
+          " · ",
+          null
+        ],
+        [
+          "_arc",
+          "#a05fb4"
+        ],
+        [
+          " · ",
+          null
+        ],
+        [
+          "_virus",
+          "#e63946"
+        ]
+      ]
     }
   ]
 }
