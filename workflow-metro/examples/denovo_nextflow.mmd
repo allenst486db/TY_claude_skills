@@ -76,7 +76,7 @@ graph LR
         ko[KEGG ko]
         nr[nr 482 GB]
         corent[core_nt 514 GB]
-        ipr[INTERPROSCAN]
+        ipr[INTERPROSCAN 예정]
         kofam[KOFAM]
         unigene -->|animal,plant,bacteria,archaea,virus| split
         split -->|animal,plant| uniprot_euk
@@ -94,9 +94,9 @@ graph LR
         transdecoder -->|animal,plant,bacteria,archaea| kofam
     end
 
-    subgraph report [통계 · 결과]
-        makestat[STATS]
-        resultannot[MERGE_ANNOT]
+    subgraph report [통계 · 결과 — 이식 예정]
+        makestat[STATS 예정]
+        resultannot[MERGE_ANNOT 예정]
         exprofile[Expression_Profile]
         xlsx[XLSX]
         rsem -->|animal,plant,bacteria,archaea,virus,reuse| makestat
