@@ -260,16 +260,38 @@ def draw_bypass(svg: str, station: str, label: str, colors: dict[str, str],
     out, arcs = [], {}
     sign = 1.0 if down else -1.0
     top = (max(rail.values()) + height) if down else (min(rail.values()) - height)
+
+    def corner(pts, r=10.0):
+        """꺾이는 점마다 반지름 r 의 2차 곡선을 넣는다 (nf-metro 갈래와 같은 모양)."""
+        d = []
+        for i, p in enumerate(pts):
+            if i == 0:
+                d.append(f"M{p[0]:.1f},{p[1]:.1f}")
+                continue
+            if i == len(pts) - 1:
+                d.append(f"L{p[0]:.1f},{p[1]:.1f}")
+                continue
+            a, c = pts[i - 1], pts[i + 1]
+            def step(frm, to):
+                dx, dy = to[0] - frm[0], to[1] - frm[1]
+                L = (dx * dx + dy * dy) ** 0.5 or 1.0
+                k = min(r, L / 2)
+                return (frm[0] + dx / L * k, frm[1] + dy / L * k)
+            s = step(p, a)
+            e = step(p, c)
+            d.append(f"L{s[0]:.1f},{s[1]:.1f}")
+            d.append(f"Q{p[0]:.1f},{p[1]:.1f},{e[0]:.1f},{e[1]:.1f}")
+        return " ".join(d)
+
     for lid in lines:
         y = rail.get(lid)
         if y is None:
             continue
         ty = y + sign * height
         x0, x3 = cx - half_w, cx + half_w
-        x1, x2 = cx - half_w * 0.34, cx + half_w * 0.34
-        c = half_w * 0.30
-        d = (f"M{x0:.1f},{y:.1f} C{x0 + c:.1f},{y:.1f} {x1 - c:.1f},{ty:.1f} {x1:.1f},{ty:.1f} "
-             f"L{x2:.1f},{ty:.1f} C{x2 + c:.1f},{ty:.1f} {x3 - c:.1f},{y:.1f} {x3:.1f},{y:.1f}")
+        pts = [(x0, y), (cx - half_w * 0.74, y), (cx - half_w * 0.30, ty),
+               (cx + half_w * 0.30, ty), (cx + half_w * 0.74, y), (x3, y)]
+        d = corner(pts)
         arcs[lid] = d
         out.append(f'<path d="{d}" stroke="{colors[lid]}" stroke-width="4.0" fill="none" '
                    f'stroke-linecap="round" stroke-linejoin="round" class="metro-bypass"/>')
@@ -290,12 +312,13 @@ def draw_bypass(svg: str, station: str, label: str, colors: dict[str, str],
     svg = svg.replace("</svg>", "\n".join(out) + "\n</svg>")
     # 우회로 공은 출발점부터 이어진 경로에 태운다 — 갈림길에서 갈라져 나온 것처럼
     n_ball = 0
+    sp = _ball_speed(svg)
     for i, lid in enumerate(k for k in lines if k in rail):
         d = build_route(svg, lid, via_sid=station,
                         bypass=(cx - half_w, cx + half_w, arcs[lid]))
         if not d:
             continue
-        svg = add_ball(svg, d, colors[lid], f"bypass-{station}-{lid}", i * 1.1 + 0.5)
+        svg = add_ball(svg, d, colors[lid], f"bypass-{station}-{lid}", sp)
         n_ball += 1
     return svg, len(arcs) + n_ball
 
@@ -396,11 +419,12 @@ def animate_through(svg: str, station: str, colors: dict[str, str],
     갈림길에서 갈라져 나온 것처럼 보이려면 경로가 출발점부터 시작해야 한다.
     """
     n = 0
+    sp = _ball_speed(svg)
     for i, lid in enumerate(lines):
         d = build_route(svg, lid, via_sid=station)
         if not d:
             continue
-        svg = add_ball(svg, d, colors[lid], f"through-{station}-{lid}", i * 1.1)
+        svg = add_ball(svg, d, colors[lid], f"through-{station}-{lid}", sp)
         n += 1
     return svg, n
 
@@ -543,15 +567,45 @@ def build_route(svg: str, lid: str, via_sid: str | None = None,
     return " ".join(parts)
 
 
-def add_ball(svg: str, d: str, color: str, pid: str, begin: float) -> str:
+def _poly_len(d: str) -> float:
+    n = [float(v) for v in re.findall(r'-?\d+(?:\.\d+)?', d)]
+    pts = list(zip(n[0::2], n[1::2]))
+    return sum(((pts[i + 1][0] - pts[i][0]) ** 2 + (pts[i + 1][1] - pts[i][1]) ** 2) ** 0.5
+               for i in range(len(pts) - 1))
+
+
+def _ball_speed(svg: str) -> tuple[float, float] | None:
+    """기존 공의 (초당 이동 거리, dur) — 새로 얹는 공을 같은 속도로 맞추기 위해."""
     dur = re.search(r'dur="([\d.]+)s"', svg)
-    kp = re.search(r'keyPoints="([^"]*)" keyTimes="([^"]*)"', svg)
-    extra = f' keyPoints="{kp.group(1)}" keyTimes="{kp.group(2)}" calcMode="linear"' if kp else ""
+    if not dur:
+        return None
+    best = None
+    for m in re.finditer(r'keyTimes="0;([\d.]+);1"[^>]*>\s*<mpath href="#(motion-path-[\w-]+)"', svg):
+        k = float(m.group(1))
+        pm = re.search(r'<path id="%s" d="([^"]+)"' % re.escape(m.group(2)), svg)
+        if pm and k > 0:
+            best = _poly_len(pm.group(1)) / (k * float(dur.group(1)))
+            break
+    return (best, float(dur.group(1))) if best else None
+
+
+def add_ball(svg: str, d: str, color: str, pid: str, speed: tuple | None = None) -> str:
+    """공 하나를 얹는다. 기존 공과 **같은 시각에 출발하고 같은 속도로** 움직이게 한다.
+
+    nf-metro 는 모든 공에 같은 dur 을 주고 keyTimes 로 실제 이동 구간을 나눈다.
+    경로가 길수록 keyTimes 가 커져 속도가 같아진다. 그 규칙을 그대로 따른다.
+    """
+    dur = re.search(r'dur="([\d.]+)s"', svg)
+    dur_s = float(dur.group(1)) if dur else 30.0
+    extra = ""
+    if speed and speed[0] > 0:
+        k = min(0.999, max(0.02, _poly_len(d) / (speed[0] * dur_s)))
+        extra = f' keyPoints="0;1;1" keyTimes="0;{k:.4f};1" calcMode="linear"'
     return svg.replace("</svg>",
         f'<path id="{pid}" d="{d}" fill="none" stroke="none"/>\n'
         f'<circle r="3.0" fill="{color}" opacity="1" stroke="#ffffff" stroke-width="1.8">'
-        f'<animateMotion dur="{dur.group(1) if dur else "30"}s"{extra} '
-        f'repeatCount="indefinite" begin="{begin:.2f}s">'
+        f'<animateMotion dur="{dur_s}s"{extra} '
+        f'repeatCount="indefinite" begin="0.00s">'
         f'<mpath href="#{pid}"/></animateMotion></circle>\n</svg>')
 
 
@@ -592,7 +646,7 @@ def _measure(entries: list[dict], col_w: float) -> float:
         if e.get("group") and e["group"] != group:
             group = e["group"]
             h += GROUP_GAP + GROUP_SIZE + 8
-        h += TITLE_SIZE + 4 + CMD_LEAD * len(e.get("cmd", []))
+        h += TITLE_SIZE + 6 + (CMD_LEAD * len(e.get("cmd", [])) + 12 if e.get("cmd") else 0)
         if _src_wraps(e, col_w):
             h += SRC_SIZE + 3
         if e.get("note"):
