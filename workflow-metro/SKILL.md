@@ -192,8 +192,10 @@ nf-metro 는 **모든 공에 같은 `dur` 을 주고 `keyTimes` 로 실제 이�
 한 번 헛짚었던 것을 남겨 둔다. `A→M→B` 와 `A→B` 를 같은 노선에 함께 걸면
 "한 노선은 한 경로만 지난다" 고 판단하고 손으로 호를 그리는 코드(`--bypass`)를 만들었는데,
 **틀렸다.** nf-metro 는 갈렸다 합류하는 노선을 그대로 그린다 — 트림 도구 택일 갈래가
-바로 그것이고, 같은 문법이 우회로에도 통한다. 그때 관찰한 "합류점이 한가운데로 처진다" 는
-사실이지만, 우회 쪽 역에 `off_track:` 을 주면 사라진다.
+바로 그것이고, 같은 문법이 우회로에도 통한다. 그때 관찰한 "합류점이 한가운데로 처진다" 도
+사실이지만 원인이 따로 있었다 — **마름모가 영역 경계를 걸치고 있었기 때문**이다.
+`assign_tracks()` 단계까지는 트림 갈래와 똑같은 값(0 / 1.31 / 0)이 나오고,
+그 뒤 영역 배치 단계에서 어긋난다. 넷을 한 영역에 넣으면 그대로 그려진다.
 
 손으로 그린 호는 **비례를 아무리 맞춰도 옆 갈래와 미묘하게 다르고 바로 티가 난다.**
 `--bypass` 는 호환을 위해 남겨는 뒀지만 쓰지 마라.
@@ -222,30 +224,46 @@ nf-metro 는 **모든 공에 같은 `dur` 을 주고 `keyTimes` 로 실제 이�
 
 **우회로는 손으로 그리지 말고 nf-metro 에게 그리게 한다.** 손으로 그린 호는 아무리
 비례를 맞춰도 옆 갈래와 미묘하게 다르고, 보는 사람은 그걸 바로 알아본다.
-`--bypass` 는 그래서 남겨는 뒀지만 **쓰지 마라.** 대신:
+`--bypass` 는 그래서 남겨는 뒀지만 **쓰지 마라.** 대신 갈렸다 합류시킨다:
 
 ```
-merge[merge (all or subset)]
-nomerge[no merge]
-%%metro off_track: nomerge
-fastqc -->|animal,plant| merge
-merge  -->|animal,plant| trinity
-fastqc -->|animal,plant| nomerge      # 같은 노선이 두 갈래로 갈렸다가
-nomerge -->|animal,plant| trinity     # 다시 합류한다
+subgraph asm [Assembly]
+    asmfork[ ]                        ← 라벨이 공백인 분기 전용 역
+    merge[merge (all or subset)]
+    nomerge[no merge]
+    trinity[Trinity]
+    fastqc  -->|animal,plant| asmfork  ← 앞 영역에서 들어오는 선
+    asmfork -->|animal,plant| merge     ← 본선: 정차한다
+    merge   -->|animal,plant| trinity
+    asmfork -->|animal,plant| nomerge   ← 우회로: 지나친다
+    nomerge -->|animal,plant| trinity
 ```
 
-한 노선이 두 경로로 갈라졌다 합류하는 것을 nf-metro 는 그대로 그린다 —
-트림 도구 택일 갈래와 **완전히 같은 모양**이 나온다. 여기에 두 가지가 필요하다:
+렌더 뒤 `--no-marker asmfork --no-marker nomerge` 로 두 역의 표시를 지운다.
+`nomerge` 는 라벨만 남아 선 위 이름이 되고, `asmfork` 는 흔적 없이 사라진다.
 
-- **`off_track:` 이 없으면** 합류역(`trinity`)이 두 갈래의 **한가운데로 끌려 내려가** 본선이 휜다.
-  `off_track:` 을 주면 그 역만 위로 들리고 본선은 직선을 유지한다.
-- **`off_track:` 은 언제나 위로만 올린다** (0.7.2 · 2.0.0 둘 다 `off_track_y = box_top + padding`).
-  아래로 우회시키는 옵션은 없다. 아래로 보내야 한다면 본선 라벨을 역 아래로 내리는 편이
-  손으로 호를 그리는 것보다 낫다.
-- **우회로에는 정차역이 없어야 한다.** 그런데 역이 없으면 갈래 자체가 생기지 않는다.
-  역을 하나 두고 렌더한 뒤 `--no-marker 역id` 로 **표시만 지우면** 라벨이 선 위에 남는다.
-- 공은 `--animate-through 역id` 로 그 갈래에도 태운다.
+### 규칙: 마름모는 한 영역 안에 통째로 들어가야 한다
 
+이게 핵심이다. **분기점 · 두 갈래 · 합류점 넷이 전부 같은 `subgraph` 안**에 있으면
+nf-metro 가 트림 도구 택일 갈래와 **완전히 같은 모양**으로 그린다 — 본선은 직선을 유지하고
+우회로가 한 칸 **아래로** 내려갔다 올라온다. 하나라도 영역을 넘어가면 배치가 무너진다.
+최소 예제로 확인한 결과다 (`q -->{m,n}--> r`, y-spacing 124):
+
+| 배치 | m (본선) | n (우회) | r (합류) | 판정 |
+|---|---|---|---|---|
+| 영역 없음 | 114 | 238 | 114 | 정상 |
+| 넷 다 한 영역 안 | 114 | 238 | 114 | **정상** |
+| 분기점 q 만 앞 영역 | 114 | 362 | 238 | 합류점이 한 칸 처짐 |
+| 합류점 r 만 뒤 영역 | 114 | 362 | 114 | 앞 구간이 통째로 밀림 |
+
+그래서 앞 영역에서 선이 들어오는 자리에 **라벨이 공백인 역을 하나 세워** 분기점을 그 영역
+안으로 끌어들인다. `%%metro entry:` 로 만들어지는 포트는 이 역할을 못 한다 — 확인했다.
+
+`off_track:` 로 우회로를 위로 띄우는 방법도 되지만, **위로만 간다**
+(0.7.2 · 2.0.0 둘 다 `off_track_y = box_top + padding`). 공백 역 쪽이 방향도 고를 수 있고
+옆 갈래와 모양도 같으므로 이쪽을 쓴다.
+
+공은 `--animate-through nomerge` 로 그 갈래에도 태운다.
 어느 역이 비었는지는 motion path 좌표를 역 좌표와 대조해 확인한다.
 
 ## 6-2. 영역을 쪼개면 우회 차선이 생긴다
@@ -287,7 +305,7 @@ nf-metro render denovo_onprem.mmd -o raw.svg \
 
 postprocess_svg.py raw.svg denovo_onprem.mmd -o denovo_onprem.svg \
   --panel denovo_onprem_panel.json \
-  --split-label "merge::" --no-marker nomerge \
+  --split-label "merge:: above" --no-marker nomerge --no-marker asmfork \
   --animate-through kofam --animate-through nomerge \
   --group "ORF prediction:transdecoder" --group "Assembly QC:busco" \
   --group "Quantification:rsem" \
