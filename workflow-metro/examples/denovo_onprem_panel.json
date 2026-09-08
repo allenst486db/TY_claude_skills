@@ -142,19 +142,6 @@
       "group": "2 · Assembly"
     },
     {
-      "name": "RSEM  —  index once per group, then once per sample",
-      "src": "runTrinity.py:303 · runRSEM.py:105-106",
-      "cmd": [
-        "align_and_estimate_abundance.pl --seqType fq --prep_reference \\",
-        "  --transcripts {G}.Trinity_Unigene.fasta --gene_trans_map {G}...gene_trans_map \\",
-        "  --est_method RSEM --aln_method bowtie --bowtie_RSEM \"--chunkmbs 1024\"",
-        "align_and_estimate_abundance.pl --seqType fq ... \\",
-        "  --left={S}_1.fastq --right={S}_2.fastq --thread_count 20 --output_dir {S}_rsem"
-      ],
-      "note": "Quantification runs for every sample of the group and is never skipped — including a run that reuses an existing assembly (runDenovoRNA.py:371-375).",
-      "group": "3 · Quant · QC · ORF · Annotation"
-    },
-    {
       "name": "BUSCO  —  only when the config has a lineage",
       "src": "runDenovoRNA.py:363-366 · runBUSCO.py:83-85",
       "cmd": [
@@ -163,7 +150,7 @@
         "  -l {BUSCO_DB}/v5/lineages/{lineage} -i {G}.Trinity_Unigene.fasta -o busco_output"
       ],
       "note": "config/virus has no lineage entry, so the Virus line never stops at BUSCO — the same reason it skips KofamScan.",
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "3 · Assembly QC · ORF"
     },
     {
       "name": "TransDecoder  —  no condition",
@@ -173,7 +160,7 @@
         "  --gene_trans_map {G}...gene_trans_map -S",
         "TransDecoder.Predict  -t {G}.Trinity_Unigene.fasta --cpu 20"
       ],
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "3 · Assembly QC · ORF"
     },
     {
       "name": "BLAST / DIAMOND  —  repeated per DB",
@@ -185,7 +172,7 @@
       ],
       "note": "runBLAST.py splits the FASTA into 100k-sequence chunks and submits sub-jobs back to SGE — a second scheduler, 7 chunks per DB.",
       "warn": true,
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "4 · Annotation"
     },
     {
       "name": "InterProScan  —  always runs, with no switch",
@@ -195,7 +182,7 @@
       ],
       "note": "It is not in the db list and there is no way to turn it off. KofamScan right below it is guarded by 'kofam' in config_dic; this one is not. Measured 4h25m.",
       "warn": true,
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "5 · Annotation via ORF"
     },
     {
       "name": "KofamScan  —  only when the config has a kofam entry",
@@ -204,7 +191,20 @@
         "forBLAST/runBLAST.py kofam {KOfamDB}/config.{euk|prok}.yml \\",
         "  selected.transdecoder.pep {G} bi2.q 100000"
       ],
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "5 · Annotation via ORF"
+    },
+    {
+      "name": "RSEM  —  index once per group, then once per sample",
+      "src": "runTrinity.py:303 · runRSEM.py:105-106",
+      "cmd": [
+        "align_and_estimate_abundance.pl --seqType fq --prep_reference \\",
+        "  --transcripts {G}.Trinity_Unigene.fasta --gene_trans_map {G}...gene_trans_map \\",
+        "  --est_method RSEM --aln_method bowtie --bowtie_RSEM \"--chunkmbs 1024\"",
+        "align_and_estimate_abundance.pl --seqType fq ... \\",
+        "  --left={S}_1.fastq --right={S}_2.fastq --thread_count 20 --output_dir {S}_rsem"
+      ],
+      "note": "Quantification runs for every sample of the group and is never skipped — including a run that reuses an existing assembly (runDenovoRNA.py:371-375).",
+      "group": "6 · Quantification"
     },
     {
       "name": "makeStatistics  —  six categories",
@@ -214,7 +214,7 @@
         "  -> result_denovo/Analysis_statistics/*.txt"
       ],
       "note": "busco joins the list only when the config has a lineage.",
-      "group": "4 · Report"
+      "group": "7 · Report"
     },
     {
       "name": "makeResultAnnot  —  where annotation meets quantification",
@@ -227,7 +227,7 @@
       ],
       "note": "A failure here still writes the success flag: .error is spelled .ok at runDenovoRNA.py:612-613.",
       "warn": true,
-      "group": "4 · Report"
+      "group": "7 · Report"
     }
   ]
 }

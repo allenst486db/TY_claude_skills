@@ -221,6 +221,71 @@ def mirror_line(svg: str, line_id: str, scale: float = 1.0, tol: float = 4.0) ->
     return "".join(pieces), n
 
 
+# ── 7. 역 하나를 건너뛰는 우회로 그리기 ──────────────────────
+def draw_bypass(svg: str, station: str, label: str, colors: dict[str, str],
+                lines: list[str], half_w: float = 45.0, height: float = 42.0,
+                label_below: bool = True) -> tuple[str, int]:
+    """한 역을 지나치는 우회로를 본선 위에 직접 그린다.
+
+    nf-metro 로는 이 그림이 안 나온다. 같은 노선에 "정차 엣지" 와 "건너뛰는 엣지" 를
+    둘 다 걸면 한쪽만 그려지고, 양쪽에 역을 두어 다이아몬드로 만들면 합류점이
+    본선 아래로 내려가 뒤 구간 전체가 한 칸씩 처진다. 그래서 직선으로 렌더한 뒤
+    우회로만 여기서 얹는다.
+
+    각 노선의 레일 y 를 그 역 근처 수평 선분에서 읽어, 같은 간격을 유지한 채
+    위로 부풀린 곡선을 노선 색으로 하나씩 그린다. 역 글리프는 만들지 않는다.
+    """
+    m = re.search(r'<(?:ellipse|rect|circle)[^>]*data-station-id="%s"[^>]*>' % station, svg)
+    if not m:
+        return svg, 0
+    a = dict(re.findall(r'([a-z-]+)="([^"]*)"', m.group(0)))
+    cx = float(a["cx"]) if "cx" in a else float(a["x"]) + float(a["width"]) / 2
+    cy = float(a["cy"]) if "cy" in a else float(a["y"]) + float(a["height"]) / 2
+
+    # 노선별 레일 y — 그 역을 가로지르는 수평 선분에서 읽는다
+    rail: dict[str, float] = {}
+    for pm in re.finditer(r'<path[^>]*data-line-id="([A-Za-z0-9_]+)"[^>]*>', svg):
+        lid = pm.group(1)
+        if lid not in lines or lid in rail:
+            continue
+        dm = re.search(r'\sd="M([\d.]+),([\d.]+) L([\d.]+),([\d.]+)"', pm.group(0))
+        if not dm:
+            continue
+        x1, y1, x2, y2 = (float(g) for g in dm.groups())
+        if abs(y1 - y2) < 0.6 and min(x1, x2) <= cx <= max(x1, x2):
+            rail[lid] = y1
+    if not rail:
+        return svg, 0
+
+    out = []
+    top = min(rail.values()) - height
+    for lid in lines:
+        y = rail.get(lid)
+        if y is None:
+            continue
+        ty = y - height
+        x0, x3 = cx - half_w, cx + half_w
+        x1, x2 = cx - half_w * 0.34, cx + half_w * 0.34
+        c = half_w * 0.30
+        d = (f"M{x0:.1f},{y:.1f} C{x0 + c:.1f},{y:.1f} {x1 - c:.1f},{ty:.1f} {x1:.1f},{ty:.1f} "
+             f"L{x2:.1f},{ty:.1f} C{x2 + c:.1f},{ty:.1f} {x3 - c:.1f},{y:.1f} {x3:.1f},{y:.1f}")
+        out.append(f'<path d="{d}" stroke="{colors[lid]}" stroke-width="4.0" fill="none" '
+                   f'stroke-linecap="round" stroke-linejoin="round" class="metro-bypass"/>')
+    out.append(f'<text x="{cx:.1f}" y="{top - 3:.1f}" font-size="13" font-family="{SANS}" '
+               f'font-weight="bold" fill="#333333" text-anchor="middle">{escape(label)}</text>')
+
+    # 역 라벨이 우회로 자리에 있으면 아래로 내린다
+    if label_below:
+        def move(mm):
+            attrs = mm.group(1)
+            if float(dict(re.findall(r'([a-z-]+)="([^"]*)"', attrs)).get("y", 0)) < cy:
+                attrs = re.sub(r'y="[\d.]+"', 'y="%.1f"' % (cy + 26), attrs)
+            return "<text " + attrs + ">"
+        svg = re.sub(r'<text ([^>]*data-station-id="%s"[^>]*)>' % station, move, svg)
+
+    return svg.replace("</svg>", "\n".join(out) + "\n</svg>"), len(out) - 1
+
+
 # ── 4. 커맨드 패널 ────────────────────────────────────────────
 
 def _text_w(s: str, size: float) -> float:
@@ -373,6 +438,8 @@ def main() -> None:
     ap.add_argument("--panel", type=Path, help="커맨드 패널 JSON")
     ap.add_argument("--speedup", type=float, default=1.5)
     ap.add_argument("--order", help="영역 id 를 흐름 순서로 콤마 나열")
+    ap.add_argument("--bypass", action="append", default=[],
+                    help="역id:라벨[:반폭:높이] — 그 역을 건너뛰는 우회로를 본선 위에 그린다.")
     ap.add_argument("--mirror-line", action="append", default=[],
                     help="ID[:배율] — 이 노선의 곡선을 본선 위로 뒤집는다 (우회로 표현). 배율 기본 1.0.")
     ap.add_argument("--map-only", type=Path,
@@ -388,6 +455,17 @@ def main() -> None:
         _pj = json.loads(a.panel.read_text(encoding="utf-8"))
         if _pj.get("colorize"):
             svg, n_col = colorize_labels(svg, _pj["colorize"])
+
+    n_by = 0
+    for spec in a.bypass:
+        parts_ = spec.split(':')
+        st, lab = parts_[0], parts_[1]
+        hw = float(parts_[2]) if len(parts_) > 2 else 45.0
+        hh = float(parts_[3]) if len(parts_) > 3 else 42.0
+        cols = parse_line_colors(a.mmd)
+        ids = [k for k in cols if k not in ('reuse',)]
+        svg, k = draw_bypass(svg, st, lab, cols, ids, hw, hh)
+        n_by += k
 
     n_mir = 0
     for spec in a.mirror_line:
@@ -409,7 +487,7 @@ def main() -> None:
 
     a.output.write_text(svg, encoding="utf-8")
     print(f"{a.output}: 원 {n_balls}개 채색 · 속도 {a.speedup}배 · "
-          f"영역번호 {n_sec}개 · 라벨 {n_col}개 · 반전 {n_mir}개 · 커맨드 {n_cmd}항목")
+          f"영역번호 {n_sec}개 · 라벨 {n_col}개 · 우회 {n_by}선 · 커맨드 {n_cmd}항목")
 
 
 if __name__ == "__main__":

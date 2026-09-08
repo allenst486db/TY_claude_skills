@@ -157,19 +157,6 @@
       "group": "2 · Assembly"
     },
     {
-      "name": "RSEM  —  index once per group, then once per sample",
-      "src": "modules/local/rsem_index.nf:31 · rsem.nf:30 · RSEM_INDEX · RSEM",
-      "cmd": [
-        "${abundance_pl} --seqType fq --prep_reference \\",
-        "  --transcripts ${unigene} --gene_trans_map ${gene_trans_map} \\",
-        "  --est_method RSEM --aln_method bowtie --bowtie_RSEM \"--chunkmbs 1024\"",
-        "${abundance_pl} --seqType fq --transcripts ${unigene} ... \\",
-        "  --left=${r1} --right=${r2} --thread_count ${task.cpus} --output_dir ${meta.id}_rsem"
-      ],
-      "note": "Groups entering through assembly_fasta join here. Quantification always runs; it is never skipped.",
-      "group": "3 · Quant · QC · ORF · Annotation"
-    },
-    {
       "name": "BUSCO",
       "src": "modules/local/busco.nf:42",
       "cmd": [
@@ -179,7 +166,7 @@
       ],
       "note": "A relative -l is read as a lineage name and fails offline, so it is resolved to an absolute path.",
       "warn": true,
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "3 · Assembly QC · ORF"
     },
     {
       "name": "TransDecoder",
@@ -189,7 +176,7 @@
         "  -t ${unigene} --gene_trans_map ${gene_trans_map} ${strand}",
         "${transdecoder_home}/TransDecoder.Predict -t ${unigene} --cpu ${task.cpus}"
       ],
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "3 · Assembly QC · ORF"
     },
     {
       "name": "BLAST / DIAMOND  —  a chunk is a task",
@@ -201,7 +188,7 @@
         "  -f 5 --max-target-seqs 5 -e ${blast_evalue} -o ${out}"
       ],
       "note": "No wrapper and no re-submitted sub-jobs. -resume works per chunk, so only the failed chunk is redone.",
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "4 · Annotation"
     },
     {
       "name": "KofamScan",
@@ -211,7 +198,7 @@
         "  -e ${kofam_evalue} --tmp-dir=kofam_tmp -o ${out} ${chunk}"
       ],
       "note": "Wrapped in a ko_annotation subworkflow because KofamKOALA will replace it.",
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "5 · Annotation via ORF"
     },
     {
       "name": "InterProScan  —  not ported yet",
@@ -222,7 +209,20 @@
       ],
       "note": "The original has no way to switch it off, so it ran every time regardless of the db list. Measured 4h25m.",
       "warn": true,
-      "group": "3 · Quant · QC · ORF · Annotation"
+      "group": "5 · Annotation via ORF"
+    },
+    {
+      "name": "RSEM  —  index once per group, then once per sample",
+      "src": "modules/local/rsem_index.nf:31 · rsem.nf:30 · RSEM_INDEX · RSEM",
+      "cmd": [
+        "${abundance_pl} --seqType fq --prep_reference \\",
+        "  --transcripts ${unigene} --gene_trans_map ${gene_trans_map} \\",
+        "  --est_method RSEM --aln_method bowtie --bowtie_RSEM \"--chunkmbs 1024\"",
+        "${abundance_pl} --seqType fq --transcripts ${unigene} ... \\",
+        "  --left=${r1} --right=${r2} --thread_count ${task.cpus} --output_dir ${meta.id}_rsem"
+      ],
+      "note": "Groups entering through assembly_fasta join here. Quantification always runs; it is never skipped.",
+      "group": "6 · Quantification"
     },
     {
       "name": "makeStatistics · makeResultAnnot  —  not ported yet",
@@ -234,7 +234,7 @@
       ],
       "note": "The original writes its success flag even when this step fails (runDenovoRNA.py:612-613).",
       "warn": true,
-      "group": "4 · Report"
+      "group": "7 · Report"
     }
   ]
 }
