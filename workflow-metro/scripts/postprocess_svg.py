@@ -287,16 +287,17 @@ def draw_bypass(svg: str, station: str, label: str, colors: dict[str, str],
             return "<text " + attrs + ">"
         svg = re.sub(r'<text ([^>]*data-station-id="%s"[^>]*)>' % station, move, svg)
 
-    dur = re.search(r'dur="([\d.]+)s"', svg)
-    if dur:
-        for i, lid in enumerate(k for k in lines if k in rail):
-            pid = f"bypass-{station}-{lid}"
-            out.append(f'<path id="{pid}" d="{arcs[lid]}" fill="none" stroke="none"/>')
-            out.append(
-                f'<circle r="3.0" fill="{colors[lid]}" opacity="1" stroke="#ffffff" stroke-width="1.8">'
-                f'<animateMotion dur="{dur.group(1)}s" repeatCount="indefinite" '
-                f'begin="{i * 0.7:.2f}s"><mpath href="#{pid}"/></animateMotion></circle>')
-    return svg.replace("</svg>", "\n".join(out) + "\n</svg>"), len(out) - 1
+    svg = svg.replace("</svg>", "\n".join(out) + "\n</svg>")
+    # 우회로 공은 출발점부터 이어진 경로에 태운다 — 갈림길에서 갈라져 나온 것처럼
+    n_ball = 0
+    for i, lid in enumerate(k for k in lines if k in rail):
+        d = build_route(svg, lid, via_sid=station,
+                        bypass=(cx - half_w, cx + half_w, arcs[lid]))
+        if not d:
+            continue
+        svg = add_ball(svg, d, colors[lid], f"bypass-{station}-{lid}", i * 1.1 + 0.5)
+        n_ball += 1
+    return svg, len(arcs) + n_ball
 
 
 # ── 8. 한 영역 안에서 하위 묶음을 옅은 음영으로 표시 ─────────
@@ -347,7 +348,9 @@ def shade_groups(svg: str, groups: list[tuple[str, list[str]]],
         for x, ys in by_x.items():
             ys.sort()
             span = [ys[0]]
-            step = 68.0
+            # 트랙 간격은 --y-spacing 에 따라 달라진다. 실제 간격에서 읽는다.
+            gaps = [ys[i + 1][0] - ys[i][0] for i in range(len(ys) - 1)]
+            step = min(gaps) if gaps else 68.0
             for cur in ys[1:]:
                 if cur[0] - span[-1][0] > step * gap_factor:
                     clusters.append((x, span)); span = [cur]
@@ -387,58 +390,19 @@ def shade_groups(svg: str, groups: list[tuple[str, list[str]]],
 # ── 9. 공이 지나지 않는 갈래에 공 추가 ───────────────────────
 def animate_through(svg: str, station: str, colors: dict[str, str],
                     lines: list[str]) -> tuple[str, int]:
-    """그 역을 지나는 움직이는 원이 하나도 없을 때 직접 만들어 붙인다.
+    """그 역을 지나는 공이 없을 때, 출발점부터 이어진 경로로 공을 하나 태운다.
 
-    nf-metro 는 노선마다 몇 개의 경로에만 공을 붙인다. 분기가 많으면 어떤 갈래는
-    공이 한 번도 지나가지 않는다. 그 역에 들어오는 선분과 나가는 선분을 이어
-    경로를 만들고 공을 하나 태운다.
+    선분 조각만 이어 붙이면 그 자리에서 공이 갑자기 생겨난 것처럼 보인다.
+    갈림길에서 갈라져 나온 것처럼 보이려면 경로가 출발점부터 시작해야 한다.
     """
-    m = re.search(r'<(?:ellipse|rect|circle)[^>]*data-station-id="%s"[^>]*>' % station, svg)
-    if not m:
-        return svg, 0
-    a = dict(re.findall(r'([a-z-]+)="([^"]*)"', m.group(0)))
-    cx = float(a["cx"]) if "cx" in a else float(a["x"]) + float(a["width"]) / 2
-    cy = float(a["cy"]) if "cy" in a else float(a["y"]) + float(a["height"]) / 2
-
-    def ends(d):
-        n = [float(v) for v in re.findall(r'-?\d+(?:\.\d+)?', d)]
-        pts = list(zip(n[0::2], n[1::2]))
-        return pts[0], pts[-1]
-
-    incoming: dict[str, str] = {}
-    outgoing: dict[str, str] = {}
-    for pm in re.finditer(r'<path[^>]*data-line-id="([A-Za-z0-9_]+)"[^>]*>', svg):
-        lid = pm.group(1)
-        if lid not in lines:
-            continue
-        dm = re.search(r'\sd="([^"]+)"', pm.group(0))
-        if not dm:
-            continue
-        (sx, sy), (ex, ey) = ends(dm.group(1))
-        if abs(ex - cx) < 9 and abs(ey - cy) < 9 and lid not in incoming:
-            incoming[lid] = dm.group(1)
-        if abs(sx - cx) < 9 and abs(sy - cy) < 9 and lid not in outgoing:
-            outgoing[lid] = dm.group(1)
-
-    dur = re.search(r'dur="([\d.]+)s"', svg)
-    if not dur:
-        return svg, 0
-    out, n = [], 0
+    n = 0
     for i, lid in enumerate(lines):
-        if lid not in incoming or lid not in outgoing:
+        d = build_route(svg, lid, via_sid=station)
+        if not d:
             continue
-        tail = re.sub(r'^M', 'L', outgoing[lid].strip())
-        d = incoming[lid] + " " + tail
-        pid = f"through-{station}-{lid}"
-        out.append(f'<path id="{pid}" d="{d}" fill="none" stroke="none"/>')
-        out.append(
-            f'<circle r="3.0" fill="{colors[lid]}" opacity="1" stroke="#ffffff" stroke-width="1.8">'
-            f'<animateMotion dur="{dur.group(1)}s" repeatCount="indefinite" '
-            f'begin="{i * 0.9:.2f}s"><mpath href="#{pid}"/></animateMotion></circle>')
+        svg = add_ball(svg, d, colors[lid], f"through-{station}-{lid}", i * 1.1)
         n += 1
-    if not out:
-        return svg, 0
-    return svg.replace("</svg>", "\n".join(out) + "\n</svg>"), n
+    return svg, n
 
 
 # ── 10. 역 라벨을 두 줄로 ─────────────────────────────────────
@@ -456,7 +420,7 @@ def split_label(svg: str, station: str, sep: str = " (",
     # 두 줄로 벌리면 아래 줄이 레일 위로 내려앉는다. 전체를 올린다.
     box = _station_box(svg, station)
     if above and box:
-        newy = box[1] - 46.0
+        newy = box[1] - 38.0
     else:
         newy = float(a.get("y", 0)) - 8
     attrs = re.sub(r'y="[\d.]+"', 'y="%.1f"' % newy, m.group(1))
@@ -464,6 +428,131 @@ def split_label(svg: str, station: str, sep: str = " (",
     body = (f'<tspan x="{x}" dy="-0.55em">{escape(head)}</tspan>'
             f'<tspan x="{x}" dy="1.15em">{escape(sep.strip() + tail)}</tspan>')
     return svg[:m.start()] + "<text " + attrs + ">" + body + "</text>" + svg[m.end():], 1
+
+
+# ── 11. 노선 전체 경로 만들기 ────────────────────────────────
+#
+# nf-metro 가 붙이는 공은 노선의 처음부터 출발한다. 뒤늦게 공을 하나 얹으면
+# 그 자리에서 갑자기 생겨난 것처럼 보인다. 갈림길에서 갈라져 나온 것처럼 보이려면
+# **출발점부터 그 갈래까지 이어진 경로**를 만들어 그 위에 태워야 한다.
+
+def _line_segments(svg: str, lid: str) -> list[tuple[tuple, tuple, str]]:
+    """한 노선의 선분들을 (시작점, 끝점, d) 로 모은다."""
+    segs = []
+    for m in re.finditer(r'<path[^>]*data-line-id="%s"[^>]*>' % lid, svg):
+        dm = re.search(r'\sd="([^"]+)"', m.group(0))
+        if not dm:
+            continue
+        n = [float(v) for v in re.findall(r'-?\d+(?:\.\d+)?', dm.group(1))]
+        pts = list(zip(n[0::2], n[1::2]))
+        if len(pts) < 2:
+            continue
+        segs.append((pts[0], pts[-1], dm.group(1)))
+    return segs
+
+
+def _key(pt, q=1.0):
+    return (round(pt[0] / q) * q, round(pt[1] / q) * q)
+
+
+def _bfs(segs, src, dst):
+    """src 에서 dst 까지 선분을 이어 가는 최단 경로 (선분 리스트)."""
+    from collections import deque
+    adj: dict = {}
+    for i, (a, b, _d) in enumerate(segs):
+        adj.setdefault(_key(a), []).append((i, _key(b)))
+    q = deque([(_key(src), [])])
+    seen = {_key(src)}
+    while q:
+        node, path = q.popleft()
+        if node == _key(dst):
+            return path
+        for i, nxt in adj.get(node, []):
+            if nxt in seen:
+                continue
+            seen.add(nxt)
+            q.append((nxt, path + [i]))
+    return None
+
+
+def _join(segs, idxs) -> str:
+    """선분 d 들을 이어 하나의 d 로. 두 번째부터는 M 을 L 로 바꾼다."""
+    out = []
+    for k, i in enumerate(idxs):
+        d = segs[i][2].strip()
+        out.append(d if k == 0 else re.sub(r'^M', 'L', d))
+    return " ".join(out)
+
+
+def build_route(svg: str, lid: str, via_sid: str | None = None,
+                bypass: tuple[float, float, str] | None = None) -> str | None:
+    """노선의 처음부터 끝까지 가는 경로. via_sid 를 지나게, bypass 구간은 갈아 끼운다."""
+    segs = _line_segments(svg, lid)
+    if not segs:
+        return None
+    starts = {_key(a) for a, _b, _d in segs}
+    ends = {_key(b) for _a, b, _d in segs}
+    src = min(starts - ends, key=lambda p: p[0], default=None)
+    sink = max(ends - starts, key=lambda p: p[0], default=None)
+    if src is None or sink is None:
+        return None
+
+    if via_sid:
+        box = _station_box(svg, via_sid)
+        if not box:
+            return None
+        via = (box[0], box[1])
+        # 역 좌표와 정확히 맞는 선분 끝점을 찾는다
+        cand = [p for a, b, _d in segs for p in (a, b)
+                if abs(p[0] - via[0]) < 9 and abs(p[1] - via[1]) < 9]
+        if not cand:
+            return None
+        via = cand[0]
+        first = _bfs(segs, src, via)
+        second = _bfs(segs, via, sink)
+        if first is None or second is None:
+            return None
+        idxs = first + second
+    else:
+        idxs = _bfs(segs, src, sink)
+        if idxs is None:
+            return None
+
+    if bypass is None:
+        return _join(segs, idxs)
+
+    x0, x3, arc = bypass
+    head, tail, state = [], [], 0
+    for i in idxs:
+        a, b, _d = segs[i]
+        if state == 0 and max(a[0], b[0]) > x0 - 1:
+            state = 1
+            continue
+        if state == 1:
+            if min(a[0], b[0]) >= x3 - 1:
+                state = 2
+            else:
+                continue
+        (head if state == 0 else tail).append(i)
+    if state != 2:
+        return None
+    parts = [_join(segs, head)] if head else []
+    parts.append(re.sub(r'^M', 'L', arc.strip()) if parts else arc.strip())
+    if tail:
+        parts.append(re.sub(r'^M', 'L', _join(segs, tail).strip()))
+    return " ".join(parts)
+
+
+def add_ball(svg: str, d: str, color: str, pid: str, begin: float) -> str:
+    dur = re.search(r'dur="([\d.]+)s"', svg)
+    kp = re.search(r'keyPoints="([^"]*)" keyTimes="([^"]*)"', svg)
+    extra = f' keyPoints="{kp.group(1)}" keyTimes="{kp.group(2)}" calcMode="linear"' if kp else ""
+    return svg.replace("</svg>",
+        f'<path id="{pid}" d="{d}" fill="none" stroke="none"/>\n'
+        f'<circle r="3.0" fill="{color}" opacity="1" stroke="#ffffff" stroke-width="1.8">'
+        f'<animateMotion dur="{dur.group(1) if dur else "30"}s"{extra} '
+        f'repeatCount="indefinite" begin="{begin:.2f}s">'
+        f'<mpath href="#{pid}"/></animateMotion></circle>\n</svg>')
 
 
 # ── 4. 커맨드 패널 ────────────────────────────────────────────
