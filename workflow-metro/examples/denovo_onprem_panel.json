@@ -152,7 +152,7 @@
         "  --left={S}_1.fastq --right={S}_2.fastq --thread_count 20 --output_dir {S}_rsem"
       ],
       "note": "Quantification runs for every sample of the group and is never skipped — including a run that reuses an existing assembly (runDenovoRNA.py:371-375).",
-      "group": "3 · Quant · QC · ORF"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
       "name": "BUSCO  —  only when the config has a lineage",
@@ -163,7 +163,7 @@
         "  -l {BUSCO_DB}/v5/lineages/{lineage} -i {G}.Trinity_Unigene.fasta -o busco_output"
       ],
       "note": "config/virus has no lineage entry, so the Virus line never stops at BUSCO — the same reason it skips KofamScan.",
-      "group": "3 · Quant · QC · ORF"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
       "name": "TransDecoder  —  no condition",
@@ -173,7 +173,7 @@
         "  --gene_trans_map {G}...gene_trans_map -S",
         "TransDecoder.Predict  -t {G}.Trinity_Unigene.fasta --cpu 20"
       ],
-      "group": "3 · Quant · QC · ORF"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
       "name": "BLAST / DIAMOND  —  repeated per DB",
@@ -185,7 +185,7 @@
       ],
       "note": "runBLAST.py splits the FASTA into 100k-sequence chunks and submits sub-jobs back to SGE — a second scheduler, 7 chunks per DB.",
       "warn": true,
-      "group": "4 · Annotation"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
       "name": "InterProScan  —  always runs, with no switch",
@@ -195,7 +195,7 @@
       ],
       "note": "It is not in the db list and there is no way to turn it off. KofamScan right below it is guarded by 'kofam' in config_dic; this one is not. Measured 4h25m.",
       "warn": true,
-      "group": "4 · Annotation"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
       "name": "KofamScan  —  only when the config has a kofam entry",
@@ -204,7 +204,7 @@
         "forBLAST/runBLAST.py kofam {KOfamDB}/config.{euk|prok}.yml \\",
         "  selected.transdecoder.pep {G} bi2.q 100000"
       ],
-      "group": "4 · Annotation"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
       "name": "makeStatistics  —  six categories",
@@ -214,7 +214,7 @@
         "  -> result_denovo/Analysis_statistics/*.txt"
       ],
       "note": "busco joins the list only when the config has a lineage.",
-      "group": "5 · Report"
+      "group": "4 · Report"
     },
     {
       "name": "makeResultAnnot  —  where annotation meets quantification",
@@ -227,7 +227,7 @@
       ],
       "note": "A failure here still writes the success flag: .error is spelled .ok at runDenovoRNA.py:612-613.",
       "warn": true,
-      "group": "5 · Report"
+      "group": "4 · Report"
     }
   ]
 }

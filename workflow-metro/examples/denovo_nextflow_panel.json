@@ -57,8 +57,8 @@
       "group": "0 · Launch"
     },
     {
-      "name": "TRIMMOMATIC  —  default",
-      "src": "modules/local/trimmomatic.nf:56",
+      "name": "Trimmomatic  —  default",
+      "src": "modules/local/trimmomatic.nf:56 · TRIMMOMATIC",
       "cmd": [
         "java -Xmx${task.memory}g -XX:ParallelGCThreads=1 -jar ${trimmomatic_jar} \\",
         "  PE -${quality} -threads ${task.cpus} ${r1} ${r2} \\",
@@ -70,8 +70,8 @@
       "group": "1 · Pre-processing"
     },
     {
-      "name": "TRIM_GALORE  —  --trim_program trim_galore",
-      "src": "modules/local/trim_galore.nf:38",
+      "name": "Trim Galore  —  --trim_program trim_galore",
+      "src": "modules/local/trim_galore.nf:38 · TRIM_GALORE",
       "cmd": [
         "${trim_galore_bin} --${quality} --dont_gzip --paired \\",
         "  --path_to_cutadapt ${cutadapt_bin} --cores ${task.cpus} ${reads}",
@@ -81,8 +81,8 @@
       "group": "1 · Pre-processing"
     },
     {
-      "name": "CUTADAPT  —  new in the port (--trim_program cutadapt)",
-      "src": "modules/local/cutadapt.nf:36",
+      "name": "Cutadapt  —  new in the port (--trim_program cutadapt)",
+      "src": "modules/local/cutadapt.nf:36 · CUTADAPT",
       "cmd": [
         "${cutadapt_bin} -a ${cutadapt_adapter_r1} -A ${cutadapt_adapter_r2} \\",
         "  --quality-cutoff ${cutadapt_quality_cutoff} --minimum-length ${cutadapt_min_length} \\",
@@ -92,8 +92,8 @@
       "group": "1 · Pre-processing"
     },
     {
-      "name": "SEQ_STATS · FASTQC  —  raw and trimmed, both",
-      "src": "modules/local/seq_stats.nf:30 · fastqc.nf:28",
+      "name": "FastQstat · FastQC  —  raw and trimmed, both",
+      "src": "modules/local/seq_stats.nf:30 · fastqc.nf:28 · SEQ_STATS · FASTQC",
       "cmd": [
         "seq_stats.py --fastq ${reads} --sample ${meta.id} \\",
         "  --stage ${stage} --output ${meta.id}.${stage}.stats.tsv",
@@ -124,8 +124,8 @@
       "group": "2 · Assembly"
     },
     {
-      "name": "MERGE_FASTQ",
-      "src": "modules/local/merge_fastq.nf:22",
+      "name": "merge",
+      "src": "modules/local/merge_fastq.nf:22 · MERGE_FASTQ",
       "cmd": [
         "cat ${r1} > ${group}_1.fastq",
         "cat ${r2} > ${group}_2.fastq"
@@ -134,8 +134,8 @@
       "group": "2 · Assembly"
     },
     {
-      "name": "TRINITY",
-      "src": "modules/local/trinity.nf:36",
+      "name": "Trinity",
+      "src": "modules/local/trinity.nf:36 · TRINITY",
       "cmd": [
         "${trinity_bin} --seqType fq --left ${r1} --right ${r2} \\",
         "  --max_memory ${task.memory}G --no_version_check ${ss} ${jaccard} \\",
@@ -145,8 +145,8 @@
       "group": "2 · Assembly"
     },
     {
-      "name": "UNIGENE",
-      "src": "modules/local/unigene.nf:44",
+      "name": "Unigene — CD-HIT-EST",
+      "src": "modules/local/unigene.nf:44 · UNIGENE",
       "cmd": [
         "longest_isoform.py --fasta ${trinity_fasta} \\",
         "  --out-fasta ${p}.Trinity_Longest.fasta --out-map ${p}...gene_trans_map",
@@ -157,8 +157,8 @@
       "group": "2 · Assembly"
     },
     {
-      "name": "RSEM_INDEX · RSEM",
-      "src": "modules/local/rsem_index.nf:31 · rsem.nf:30",
+      "name": "RSEM  —  index once per group, then once per sample",
+      "src": "modules/local/rsem_index.nf:31 · rsem.nf:30 · RSEM_INDEX · RSEM",
       "cmd": [
         "${abundance_pl} --seqType fq --prep_reference \\",
         "  --transcripts ${unigene} --gene_trans_map ${gene_trans_map} \\",
@@ -167,7 +167,7 @@
         "  --left=${r1} --right=${r2} --thread_count ${task.cpus} --output_dir ${meta.id}_rsem"
       ],
       "note": "Groups entering through assembly_fasta join here. Quantification always runs; it is never skipped.",
-      "group": "3 · Quant · QC · ORF"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
       "name": "BUSCO",
@@ -179,21 +179,21 @@
       ],
       "note": "A relative -l is read as a lineage name and fails offline, so it is resolved to an absolute path.",
       "warn": true,
-      "group": "3 · Quant · QC · ORF"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
-      "name": "TRANSDECODER",
-      "src": "modules/local/transdecoder.nf:32",
+      "name": "TransDecoder",
+      "src": "modules/local/transdecoder.nf:32 · TRANSDECODER",
       "cmd": [
         "${transdecoder_home}/TransDecoder.LongOrfs \\",
         "  -t ${unigene} --gene_trans_map ${gene_trans_map} ${strand}",
         "${transdecoder_home}/TransDecoder.Predict -t ${unigene} --cpu ${task.cpus}"
       ],
-      "group": "3 · Quant · QC · ORF"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
-      "name": "BLAST_CHUNK  —  a chunk is a task",
-      "src": "subworkflows/local/annotation.nf:87 · modules/local/blast_chunk.nf:40",
+      "name": "BLAST / DIAMOND  —  a chunk is a task",
+      "src": "subworkflows/local/annotation.nf:87 · modules/local/blast_chunk.nf:40 · BLAST_CHUNK",
       "cmd": [
         ".splitFasta(by: params.seq_split, file: true, elem: 1)",
         "${diamond_bin} ${program} -p ${task.cpus} -t ./TMP -d ${db_prefix} -q ${chunk} \\",
@@ -201,17 +201,17 @@
         "  -f 5 --max-target-seqs 5 -e ${blast_evalue} -o ${out}"
       ],
       "note": "No wrapper and no re-submitted sub-jobs. -resume works per chunk, so only the failed chunk is redone.",
-      "group": "4 · Annotation"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
-      "name": "KOFAMSCAN_CHUNK",
-      "src": "modules/local/kofamscan_chunk.nf:32",
+      "name": "KofamScan",
+      "src": "modules/local/kofamscan_chunk.nf:32 · KOFAMSCAN_CHUNK",
       "cmd": [
         "${kofamscan_home}/exec_annotation --cpu=${task.cpus} -c ${kofam_config} \\",
         "  -e ${kofam_evalue} --tmp-dir=kofam_tmp -o ${out} ${chunk}"
       ],
       "note": "Wrapped in a ko_annotation subworkflow because KofamKOALA will replace it.",
-      "group": "4 · Annotation"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
       "name": "InterProScan  —  not ported yet",
@@ -222,10 +222,10 @@
       ],
       "note": "The original has no way to switch it off, so it ran every time regardless of the db list. Measured 4h25m.",
       "warn": true,
-      "group": "4 · Annotation"
+      "group": "3 · Quant · QC · ORF · Annotation"
     },
     {
-      "name": "Result merge  —  not ported yet",
+      "name": "makeStatistics · makeResultAnnot  —  not ported yet",
       "src": "original makeStatistics.py · makeResultAnnot.py",
       "cmd": [
         "# the port currently ends at RSEM and annotation. This is the shape it will take:",
@@ -234,7 +234,7 @@
       ],
       "note": "The original writes its success flag even when this step fails (runDenovoRNA.py:612-613).",
       "warn": true,
-      "group": "5 · Report"
+      "group": "4 · Report"
     }
   ]
 }

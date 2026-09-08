@@ -153,11 +153,87 @@ def colorize_labels(svg: str, rules: list[dict]) -> tuple[str, int]:
     return svg, n
 
 
+# ── 6. 우회 노선을 본선 위로 뒤집기 ──────────────────────────
+_PATH_D = re.compile(r'\sd="([^"]+)"')
+
+
+def _iter_d_numbers(d: str):
+    """path 의 d 문자열에서 (시작, 끝, 값) 형태로 숫자를 훑는다."""
+    for m in re.finditer(r'-?\d+(?:\.\d+)?', d):
+        yield m
+
+
+def mirror_line(svg: str, line_id: str, scale: float = 1.0, tol: float = 4.0) -> tuple[str, int]:
+    """한 노선의 곡선을 본선 기준으로 위아래 뒤집는다.
+
+    nf-metro 는 바깥 트랙을 아래로 부풀린다. 우회로를 위로 올리고 싶을 때 쓴다.
+    본선 높이(Y0)는 그 노선 경로에 나오는 가장 작은 y 로 잡고, Y0 에서 tol 이내인
+    점은 그대로 둔다 — 역·포트와 맞물리는 끝점이 어긋나지 않게 하기 위해서다.
+
+    scale 은 뒤집은 뒤의 진폭이다. 1.0 으로 그대로 뒤집으면 영역 상자 위로 삐져나가는
+    일이 잦다 — 위쪽은 역 라벨이 차지하고 있어 여유가 아래보다 좁기 때문이다.
+    0.3 안팎으로 낮춰 라벨과 역 사이에 끼워 넣는다.
+
+    M/L/Q/C/S/T 처럼 좌표가 쌍으로 오는 명령만 다룬다. 다른 명령이 있으면 건너뛴다.
+    """
+    targets = [m for m in re.finditer(
+        r'<path[^>]*(?:data-line-id="%s"|id="motion-path-%s-\d+")[^>]*?/?>' % (line_id, line_id), svg)]
+    if not targets:
+        return svg, 0
+
+    ys: list[float] = []
+    for m in targets:
+        dm = _PATH_D.search(m.group(0))
+        if not dm:
+            continue
+        if re.search(r'[AaHhVvZzmlqcst]', re.sub(r'-?\d+(?:\.\d+)?', '', dm.group(1))):
+            return svg, 0          # 다룰 수 없는 명령이 섞여 있으면 손대지 않는다
+        nums = [float(x.group(0)) for x in _iter_d_numbers(dm.group(1))]
+        ys += nums[1::2]
+    if not ys:
+        return svg, 0
+    y0 = min(ys)
+
+    def flip(dstr: str) -> str:
+        out, last, idx = [], 0, 0
+        for m in _iter_d_numbers(dstr):
+            out.append(dstr[last:m.start()])
+            v = float(m.group(0))
+            if idx % 2 == 1 and abs(v - y0) > tol:
+                v = y0 - (v - y0) * scale
+                out.append(f"{v:.2f}")
+            else:
+                out.append(m.group(0))
+            last, idx = m.end(), idx + 1
+        out.append(dstr[last:])
+        return "".join(out)
+
+    pieces, prev, n = [], 0, 0
+    for m in targets:
+        dm = _PATH_D.search(m.group(0))
+        if not dm:
+            continue
+        s = m.start() + dm.start(1)
+        e = m.start() + dm.end(1)
+        pieces.append(svg[prev:s]); pieces.append(flip(dm.group(1)))
+        prev = e; n += 1
+    pieces.append(svg[prev:])
+    return "".join(pieces), n
+
+
 # ── 4. 커맨드 패널 ────────────────────────────────────────────
 
 def _text_w(s: str, size: float) -> float:
     """대략적인 렌더 폭. 한글은 한 글자가 ASCII 두 배쯤 된다."""
     return sum(1.0 if ord(c) > 0x2000 else 0.52 for c in s) * size
+
+
+def _src_wraps(entry: dict, col_w: float) -> bool:
+    """항목 이름과 오른쪽 정렬한 출처가 한 줄에 같이 들어가는지."""
+    if not entry.get("src"):
+        return False
+    need = _text_w(entry.get("name", ""), TITLE_SIZE) + _text_w(entry["src"], SRC_SIZE) + 28
+    return need > col_w
 
 
 def _wrap(text: str, size: float, width: float) -> list[str]:
@@ -183,6 +259,8 @@ def _measure(entries: list[dict], col_w: float) -> float:
             group = e["group"]
             h += GROUP_GAP + GROUP_SIZE + 8
         h += TITLE_SIZE + 4 + CMD_LEAD * len(e.get("cmd", []))
+        if _src_wraps(e, col_w):
+            h += SRC_SIZE + 3
         if e.get("note"):
             h += (NOTE_SIZE + 3) * len(_wrap(e["note"], NOTE_SIZE, col_w)) + 3
         h += ENTRY_GAP
@@ -207,6 +285,9 @@ def _draw(entries: list[dict], x: float, y: float, col_w: float) -> list[str]:
                    f'font-family="{SANS}" font-weight="700" fill="#4a4a4a">'
                    f'{escape(e.get("name", ""))}</text>')
         if e.get("src"):
+            # 이름이 길면 오른쪽 정렬한 출처와 겹친다. 그럴 때만 다음 줄로 내린다.
+            if _src_wraps(e, col_w):
+                cy += SRC_SIZE + 3
             out.append(f'<text x="{x + col_w:.1f}" y="{cy:.1f}" font-size="{SRC_SIZE}" '
                        f'font-family="{SANS}" text-anchor="end" fill="#9a9a9a">'
                        f'{escape(e["src"])}</text>')
@@ -292,6 +373,8 @@ def main() -> None:
     ap.add_argument("--panel", type=Path, help="커맨드 패널 JSON")
     ap.add_argument("--speedup", type=float, default=1.5)
     ap.add_argument("--order", help="영역 id 를 흐름 순서로 콤마 나열")
+    ap.add_argument("--mirror-line", action="append", default=[],
+                    help="ID[:배율] — 이 노선의 곡선을 본선 위로 뒤집는다 (우회로 표현). 배율 기본 1.0.")
     ap.add_argument("--map-only", type=Path,
                     help="패널 없는 판본을 따로 저장할 경로 (HTML 삽입용)")
     a = ap.parse_args()
@@ -305,6 +388,12 @@ def main() -> None:
         _pj = json.loads(a.panel.read_text(encoding="utf-8"))
         if _pj.get("colorize"):
             svg, n_col = colorize_labels(svg, _pj["colorize"])
+
+    n_mir = 0
+    for spec in a.mirror_line:
+        lid, _, sc = spec.partition(":")
+        svg, k = mirror_line(svg, lid, float(sc) if sc else 1.0)
+        n_mir += k
 
     n_sec = 0
     if a.order:
@@ -320,7 +409,7 @@ def main() -> None:
 
     a.output.write_text(svg, encoding="utf-8")
     print(f"{a.output}: 원 {n_balls}개 채색 · 속도 {a.speedup}배 · "
-          f"영역번호 {n_sec}개 · 라벨 {n_col}개 · 커맨드 {n_cmd}항목")
+          f"영역번호 {n_sec}개 · 라벨 {n_col}개 · 반전 {n_mir}개 · 커맨드 {n_cmd}항목")
 
 
 if __name__ == "__main__":
