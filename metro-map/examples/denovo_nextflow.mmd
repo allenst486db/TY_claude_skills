@@ -1,0 +1,76 @@
+%%metro title: T2_Denovo — Nextflow 이식본
+%%metro style: light
+%%metro animate: true
+%%metro legend: bl
+%%metro line: animal | Animal — normal_eukaryota · metazoa_odb12 등 (default) | #2db572
+%%metro line: plant | Plant — normal_eukaryota · viridiplantae_odb12 | #0570b0
+%%metro line: bacteria | Bacteria — normal_bacteria · kofam_prok | #f5c542
+%%metro line: archaea | Archaea — normal_archaea | #a05fb4
+%%metro line: virus | Virus — BUSCO · KofamScan 없음, 전용 DB | #e63946
+%%metro line: offdb | 미적용 — nr · core_nt (운영 설정엔 있음) | #9e9e9e | dashed
+%%metro file: fastq | FASTQ
+%%metro file: xlsx | XLSX
+
+graph LR
+    subgraph pre [전처리]
+        fastq[FASTQ]
+        fastqstat[FastQstat]
+        rnaqc[RNAQC]
+        trim[TRIMMOMATIC]
+        trimgalore[TrimGalore]
+        fastqc[FastQC]
+        fastq -->|animal,plant,bacteria,archaea,virus| fastqstat
+        fastqstat -->|animal,plant,bacteria,archaea,virus| rnaqc
+        rnaqc -->|animal,plant,bacteria,archaea,virus| trim
+        rnaqc -->|animal| trimgalore
+        trim -->|animal,plant,bacteria,archaea,virus| fastqc
+        trimgalore -->|animal| fastqc
+    end
+
+    subgraph asm [조립]
+        merge[MERGE_FASTQ]
+        trinity[TRINITY]
+        unigene[UNIGENE]
+        rsemidx[RSEM_INDEX]
+        fastqc -->|animal,plant,bacteria,archaea,virus| merge
+        merge -->|animal,plant,bacteria,archaea,virus| trinity
+        trinity -->|animal,plant,bacteria,archaea,virus| unigene
+        unigene -->|animal,plant,bacteria,archaea,virus| rsemidx
+    end
+
+    subgraph post [후처리]
+        busco[BUSCO]
+        transdecoder[TRANSDECODER]
+        rsem[RSEM]
+        rsemidx -->|animal,plant,bacteria,archaea| busco
+        rsemidx -->|animal,plant,bacteria,archaea,virus| transdecoder
+        rsemidx -->|animal,plant,bacteria,archaea,virus| rsem
+    end
+
+    subgraph annot [주석]
+        uniprot[uniprot_euk / _pro / _arc / _virus]
+        pfam[pfam]
+        eggnog[eggnog]
+        kegg[KEGG ko]
+        virusdb[virus_prot / virus_nucl]
+        kofam[KOFAMSCAN]
+        nr[nr]
+        corent[core_nt]
+        unigene -->|animal,plant,bacteria,archaea,virus| uniprot
+        uniprot -->|animal,plant,bacteria,archaea,virus| pfam
+        pfam -->|animal,plant,bacteria,archaea,virus| eggnog
+        eggnog -->|animal,plant,bacteria,archaea,virus| kegg
+        kegg -->|virus| virusdb
+        transdecoder -->|animal,plant,bacteria,archaea| kofam
+        kegg -->|offdb| nr
+        nr -->|offdb| corent
+    end
+
+    subgraph report [결과]
+        stats[통계 · 결과 통합]
+        xlsx[XLSX]
+        rsem -->|animal,plant,bacteria,archaea,virus| stats
+        kofam -->|animal,plant,bacteria,archaea| stats
+        virusdb -->|virus| stats
+        stats -->|animal,plant,bacteria,archaea,virus| xlsx
+    end
