@@ -44,7 +44,7 @@ graph LR
         trinity -->|animal,plant,bacteria,archaea,virus| unigene
     end
 
-    subgraph down [Post-assembly — no order between these]
+    subgraph down [Post-assembly (Parallel processing)]
         %%metro entry: left | animal,plant,bacteria,archaea,virus,reuse
         %%metro exit: right | animal,plant,bacteria,archaea,virus,reuse
         busco[BUSCO]
@@ -74,7 +74,7 @@ graph LR
         transdecoder -->|animal,plant,bacteria,archaea| kofam
     end
 
-    subgraph report [Report]
+    subgraph report [Statistics & Reporting]
         %%metro entry: left | animal,plant,bacteria,archaea,virus,reuse
         stats[Result merge  planned]
         xlsx[XLSX]

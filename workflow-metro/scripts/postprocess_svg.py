@@ -224,7 +224,7 @@ def mirror_line(svg: str, line_id: str, scale: float = 1.0, tol: float = 4.0) ->
 # ── 7. 역 하나를 건너뛰는 우회로 그리기 ──────────────────────
 def draw_bypass(svg: str, station: str, label: str, colors: dict[str, str],
                 lines: list[str], half_w: float = 45.0, height: float = 42.0,
-                label_below: bool = True) -> tuple[str, int]:
+                down: bool = False) -> tuple[str, int]:
     """한 역을 지나치는 우회로를 본선 위에 직접 그린다.
 
     nf-metro 로는 이 그림이 안 나온다. 같은 노선에 "정차 엣지" 와 "건너뛰는 엣지" 를
@@ -257,25 +257,29 @@ def draw_bypass(svg: str, station: str, label: str, colors: dict[str, str],
     if not rail:
         return svg, 0
 
-    out = []
-    top = min(rail.values()) - height
+    out, arcs = [], {}
+    sign = 1.0 if down else -1.0
+    top = (max(rail.values()) + height) if down else (min(rail.values()) - height)
     for lid in lines:
         y = rail.get(lid)
         if y is None:
             continue
-        ty = y - height
+        ty = y + sign * height
         x0, x3 = cx - half_w, cx + half_w
         x1, x2 = cx - half_w * 0.34, cx + half_w * 0.34
         c = half_w * 0.30
         d = (f"M{x0:.1f},{y:.1f} C{x0 + c:.1f},{y:.1f} {x1 - c:.1f},{ty:.1f} {x1:.1f},{ty:.1f} "
              f"L{x2:.1f},{ty:.1f} C{x2 + c:.1f},{ty:.1f} {x3 - c:.1f},{y:.1f} {x3:.1f},{y:.1f}")
+        arcs[lid] = d
         out.append(f'<path d="{d}" stroke="{colors[lid]}" stroke-width="4.0" fill="none" '
                    f'stroke-linecap="round" stroke-linejoin="round" class="metro-bypass"/>')
-    out.append(f'<text x="{cx:.1f}" y="{top - 3:.1f}" font-size="13" font-family="{SANS}" '
-               f'font-weight="bold" fill="#333333" text-anchor="middle">{escape(label)}</text>')
+    ly = top + 16 if down else top - 3
+    out.append(f'<text x="{cx:.1f}" y="{ly:.1f}" font-size="13" font-family="{SANS}" '
+               f'font-weight="bold" fill="#333333" text-anchor="middle" paint-order="stroke" '
+               f'stroke="#ffffff" stroke-width="3">{escape(label)}</text>')
 
-    # 역 라벨이 우회로 자리에 있으면 아래로 내린다
-    if label_below:
+    # 우회로를 위로 그릴 때만 역 라벨을 아래로 비켜 준다
+    if not down:
         def move(mm):
             attrs = mm.group(1)
             if float(dict(re.findall(r'([a-z-]+)="([^"]*)"', attrs)).get("y", 0)) < cy:
@@ -283,6 +287,15 @@ def draw_bypass(svg: str, station: str, label: str, colors: dict[str, str],
             return "<text " + attrs + ">"
         svg = re.sub(r'<text ([^>]*data-station-id="%s"[^>]*)>' % station, move, svg)
 
+    dur = re.search(r'dur="([\d.]+)s"', svg)
+    if dur:
+        for i, lid in enumerate(k for k in lines if k in rail):
+            pid = f"bypass-{station}-{lid}"
+            out.append(f'<path id="{pid}" d="{arcs[lid]}" fill="none" stroke="none"/>')
+            out.append(
+                f'<circle r="3.0" fill="{colors[lid]}" opacity="1" stroke="#ffffff" stroke-width="1.8">'
+                f'<animateMotion dur="{dur.group(1)}s" repeatCount="indefinite" '
+                f'begin="{i * 0.7:.2f}s"><mpath href="#{pid}"/></animateMotion></circle>')
     return svg.replace("</svg>", "\n".join(out) + "\n</svg>"), len(out) - 1
 
 
@@ -304,7 +317,8 @@ def _station_box(svg: str, sid: str):
 
 
 def shade_groups(svg: str, groups: list[tuple[str, list[str]]],
-                 pad: float = 16.0, gap_factor: float = 1.7) -> tuple[str, int]:
+                 pad: float = 16.0, gap_factor: float = 1.7,
+                 min_h: float = 0.0) -> tuple[str, int]:
     """영역 하나 안에서 같은 성격의 역들을 옅은 음영으로 묶는다.
 
     큰 상자를 여러 개로 쪼개면 그 상자에 정차하지 않는 노선이 우회 차선으로
@@ -345,9 +359,17 @@ def shade_groups(svg: str, groups: list[tuple[str, list[str]]],
             w = max(v[1] for v in span)
             y0, y1 = span[0][0], span[-1][0]
             rx0, ry0 = x - w / 2 - pad - 16, y0 - pad - 6   # 왼쪽에 묶음 이름 자리
-            rw, rh = w + pad * 2 + 16, (y1 - y0) + pad * 2 + 24
+            rw = w + pad * 2 + 20
+            rh = (y1 - y0) + pad * 2 + 24
+            # 세로로 세운 묶음 이름이 들어갈 높이를 확보한다
+            need = _text_w(label, 11) + 24
+            if rh < max(need, min_h):
+                grow = max(need, min_h) - rh
+                ry0 -= grow / 2
+                rh += grow
             out.append(f'<rect x="{rx0:.1f}" y="{ry0:.1f}" width="{rw:.1f}" height="{rh:.1f}" '
-                       f'rx="7" ry="7" fill="#000000" opacity="0.045"/>')
+                       f'rx="8" ry="8" fill="#1b2027" opacity="0.075" '
+                       f'stroke="#9aa3ad" stroke-opacity="0.35" stroke-width="1"/>')
             if span is biggest[1]:
                 # 역 이름과 겹치지 않게, 음영 안쪽 왼쪽 가장자리에 세로로 세운다
                 top_out.append(
@@ -360,6 +382,88 @@ def shade_groups(svg: str, groups: list[tuple[str, list[str]]],
             n += 1
     svg = svg[:anchor] + "\n" + "\n".join(out) + svg[anchor:]
     return svg.replace("</svg>", "\n".join(top_out) + "\n</svg>"), n
+
+
+# ── 9. 공이 지나지 않는 갈래에 공 추가 ───────────────────────
+def animate_through(svg: str, station: str, colors: dict[str, str],
+                    lines: list[str]) -> tuple[str, int]:
+    """그 역을 지나는 움직이는 원이 하나도 없을 때 직접 만들어 붙인다.
+
+    nf-metro 는 노선마다 몇 개의 경로에만 공을 붙인다. 분기가 많으면 어떤 갈래는
+    공이 한 번도 지나가지 않는다. 그 역에 들어오는 선분과 나가는 선분을 이어
+    경로를 만들고 공을 하나 태운다.
+    """
+    m = re.search(r'<(?:ellipse|rect|circle)[^>]*data-station-id="%s"[^>]*>' % station, svg)
+    if not m:
+        return svg, 0
+    a = dict(re.findall(r'([a-z-]+)="([^"]*)"', m.group(0)))
+    cx = float(a["cx"]) if "cx" in a else float(a["x"]) + float(a["width"]) / 2
+    cy = float(a["cy"]) if "cy" in a else float(a["y"]) + float(a["height"]) / 2
+
+    def ends(d):
+        n = [float(v) for v in re.findall(r'-?\d+(?:\.\d+)?', d)]
+        pts = list(zip(n[0::2], n[1::2]))
+        return pts[0], pts[-1]
+
+    incoming: dict[str, str] = {}
+    outgoing: dict[str, str] = {}
+    for pm in re.finditer(r'<path[^>]*data-line-id="([A-Za-z0-9_]+)"[^>]*>', svg):
+        lid = pm.group(1)
+        if lid not in lines:
+            continue
+        dm = re.search(r'\sd="([^"]+)"', pm.group(0))
+        if not dm:
+            continue
+        (sx, sy), (ex, ey) = ends(dm.group(1))
+        if abs(ex - cx) < 9 and abs(ey - cy) < 9 and lid not in incoming:
+            incoming[lid] = dm.group(1)
+        if abs(sx - cx) < 9 and abs(sy - cy) < 9 and lid not in outgoing:
+            outgoing[lid] = dm.group(1)
+
+    dur = re.search(r'dur="([\d.]+)s"', svg)
+    if not dur:
+        return svg, 0
+    out, n = [], 0
+    for i, lid in enumerate(lines):
+        if lid not in incoming or lid not in outgoing:
+            continue
+        tail = re.sub(r'^M', 'L', outgoing[lid].strip())
+        d = incoming[lid] + " " + tail
+        pid = f"through-{station}-{lid}"
+        out.append(f'<path id="{pid}" d="{d}" fill="none" stroke="none"/>')
+        out.append(
+            f'<circle r="3.0" fill="{colors[lid]}" opacity="1" stroke="#ffffff" stroke-width="1.8">'
+            f'<animateMotion dur="{dur.group(1)}s" repeatCount="indefinite" '
+            f'begin="{i * 0.9:.2f}s"><mpath href="#{pid}"/></animateMotion></circle>')
+        n += 1
+    if not out:
+        return svg, 0
+    return svg.replace("</svg>", "\n".join(out) + "\n</svg>"), n
+
+
+# ── 10. 역 라벨을 두 줄로 ─────────────────────────────────────
+def split_label(svg: str, station: str, sep: str = " (",
+                above: bool = False) -> tuple[str, int]:
+    """긴 역 이름을 두 줄로 쪼갠다. 한 줄로 두면 옆 역 라벨과 붙는다.
+
+    above 를 주면 역 위쪽에 올린다 — 아래에 우회로를 그릴 때 자리를 비켜 주기 위해서다.
+    """
+    m = re.search(r'<text ([^>]*data-station-id="%s"[^>]*)>([^<]*)</text>' % station, svg)
+    if not m or sep not in m.group(2):
+        return svg, 0
+    a = dict(re.findall(r'([a-z-]+)="([^"]*)"', m.group(1)))
+    x = a.get("x", "0")
+    # 두 줄로 벌리면 아래 줄이 레일 위로 내려앉는다. 전체를 올린다.
+    box = _station_box(svg, station)
+    if above and box:
+        newy = box[1] - 46.0
+    else:
+        newy = float(a.get("y", 0)) - 8
+    attrs = re.sub(r'y="[\d.]+"', 'y="%.1f"' % newy, m.group(1))
+    head, _, tail = m.group(2).partition(sep)
+    body = (f'<tspan x="{x}" dy="-0.55em">{escape(head)}</tspan>'
+            f'<tspan x="{x}" dy="1.15em">{escape(sep.strip() + tail)}</tspan>')
+    return svg[:m.start()] + "<text " + attrs + ">" + body + "</text>" + svg[m.end():], 1
 
 
 # ── 4. 커맨드 패널 ────────────────────────────────────────────
@@ -514,6 +618,10 @@ def main() -> None:
     ap.add_argument("--panel", type=Path, help="커맨드 패널 JSON")
     ap.add_argument("--speedup", type=float, default=1.5)
     ap.add_argument("--order", help="영역 id 를 흐름 순서로 콤마 나열")
+    ap.add_argument("--animate-through", action="append", default=[],
+                    help="역id — 그 역을 지나는 공이 없을 때 직접 만들어 붙인다.")
+    ap.add_argument("--split-label", action="append", default=[],
+                    help="역id[:구분자] — 역 이름을 두 줄로 쪼갠다 (기본 구분자 \" (\").")
     ap.add_argument("--group", action="append", default=[],
                     help="라벨:역id1,역id2,... — 한 영역 안에서 같은 성격의 역을 옅은 음영으로 묶는다.")
     ap.add_argument("--bypass", action="append", default=[],
@@ -534,6 +642,17 @@ def main() -> None:
         if _pj.get("colorize"):
             svg, n_col = colorize_labels(svg, _pj["colorize"])
 
+    n_thr = 0
+    for sid in a.animate_through:
+        cols = parse_line_colors(a.mmd)
+        svg, k = animate_through(svg, sid, cols, [c for c in cols if c != 'reuse'])
+        n_thr += k
+    for spec in a.split_label:
+        bits = spec.split(':')
+        sid = bits[0]
+        sep = bits[1] if len(bits) > 1 and bits[1] else ' ('
+        svg, _k = split_label(svg, sid, sep, len(bits) > 2 and bits[2].strip() == 'above')
+
     n_grp = 0
     if a.group:
         gs = [(g.split(':', 1)[0], g.split(':', 1)[1].split(',')) for g in a.group]
@@ -545,9 +664,10 @@ def main() -> None:
         st, lab = parts_[0], parts_[1]
         hw = float(parts_[2]) if len(parts_) > 2 else 45.0
         hh = float(parts_[3]) if len(parts_) > 3 else 42.0
+        dn = len(parts_) > 4 and parts_[4] == "down"
         cols = parse_line_colors(a.mmd)
         ids = [k for k in cols if k not in ('reuse',)]
-        svg, k = draw_bypass(svg, st, lab, cols, ids, hw, hh)
+        svg, k = draw_bypass(svg, st, lab, cols, ids, hw, hh, dn)
         n_by += k
 
     n_mir = 0
@@ -570,7 +690,7 @@ def main() -> None:
 
     a.output.write_text(svg, encoding="utf-8")
     print(f"{a.output}: 원 {n_balls}개 채색 · 속도 {a.speedup}배 · "
-          f"영역번호 {n_sec}개 · 묶음 {n_grp}개 · 우회 {n_by}선 · 커맨드 {n_cmd}항목")
+          f"영역번호 {n_sec}개 · 묶음 {n_grp}개 · 우회 {n_by}선 · 추가공 {n_thr}개 · 커맨드 {n_cmd}항목")
 
 
 if __name__ == "__main__":
