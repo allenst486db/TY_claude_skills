@@ -3,71 +3,80 @@
 %%metro line: animal | Animal — conf/kingdom/eukaryota.config · lineage metazoa | #2db572
 %%metro line: plant | Plant — conf/kingdom/eukaryota.config · lineage viridiplantae | #0570b0
 %%metro line: bacteria | Bacteria — conf/kingdom/bacteria.config · uniprot_pro · kofam_prok | #f5c542
-%%metro line: archaea | Archaea — conf/kingdom/archaea.config · uniprot_arc · ko·kofam 은 euk | #a05fb4
-%%metro line: virus | Virus — conf/kingdom/virus.config · 전용 DB · 채널이 비어 스킵 | #e63946
-%%metro line: reuse | samplesheet assembly_fasta — 조립을 건너뛰고 RSEM 정량만 | #ff8c00 | dashed
+%%metro line: archaea | Archaea — conf/kingdom/archaea.config · uniprot_arc · ko/kofam use the euk sets | #a05fb4
+%%metro line: virus | Virus — conf/kingdom/virus.config · no lineage, no kofam · virus-specific DBs | #e63946
+%%metro line: reuse | samplesheet assembly_fasta — quantification only | #ff8c00 | dashed
+%%metro line: nomerge | assembly_group per sample — each sample assembled on its own (skips MERGE_FASTQ) | #7a7a7a | dashed
 %%metro file: fastq | FASTQ
 %%metro file: xlsx | XLSX
-%%metro off_track: merge
 %%metro grid: pre | 0,0
 %%metro grid: asm | 1,0
-%%metro grid: post | 2,0
-%%metro grid: annot | 3,0
-%%metro grid: report | 4,0
+%%metro grid: quant | 2,0
+%%metro grid: qc | 3,0
+%%metro grid: annot | 4,0
+%%metro grid: report | 5,0
 
 graph LR
-    subgraph pre [PREPROCESS]
+    subgraph pre [Pre-processing]
         %%metro exit: right | animal,plant,bacteria,archaea,virus,reuse
         fastq[FASTQ]
-        fastqstat[SEQ_STATS]
-        rnaqc[RNAQC]
-        trim[TRIMMOMATIC]
-        trimgalore[TRIM_GALORE]
-        fastqc[FASTQC]
+        fastqstat[FastQstat]
+        rnaqc[RNAQC  planned]
+        trim[Trimmomatic]
+        cutadapt[Cutadapt]
+        trimgalore[Trim Galore]
+        fastqc[FastQC]
         fastq -->|animal,plant,bacteria,archaea,virus,reuse| fastqstat
         fastqstat -->|animal,plant,bacteria,archaea,virus,reuse| rnaqc
         rnaqc -->|animal,plant,bacteria,archaea,virus,reuse| trim
+        rnaqc -->|animal,plant,bacteria,archaea,virus,reuse| cutadapt
         rnaqc -->|animal,plant,bacteria,archaea,virus,reuse| trimgalore
         trim -->|animal,plant,bacteria,archaea,virus,reuse| fastqc
+        cutadapt -->|animal,plant,bacteria,archaea,virus,reuse| fastqc
         trimgalore -->|animal,plant,bacteria,archaea,virus,reuse| fastqc
     end
 
-    subgraph asm [ASSEMBLY]
+    subgraph asm [Assembly]
         %%metro entry: left | animal,plant,bacteria,archaea,virus
         %%metro exit: right | animal,plant,bacteria,archaea,virus
-        merge[MERGE_FASTQ]
-        trinity[TRINITY]
-        unigene[UNIGENE]
-        fastqc -->|animal,plant,bacteria,archaea,virus| trinity
+        merge[MERGE_FASTQ (all or subset)]
+        trinity[Trinity]
+        unigene[Unigene]
         fastqc -->|animal,plant,bacteria,archaea,virus| merge
         merge -->|animal,plant,bacteria,archaea,virus| trinity
+        fastqc -->|nomerge| trinity
         trinity -->|animal,plant,bacteria,archaea,virus| unigene
     end
 
-    subgraph post [정량 · 조립 QC]
+    subgraph quant [Quantification]
         %%metro entry: left | animal,plant,bacteria,archaea,virus,reuse
         %%metro exit: right | animal,plant,bacteria,archaea,virus,reuse
-        rsem[RSEM]
-        busco[BUSCO]
-        transdecoder[TRANSDECODER]
+        rsem[RSEM  per sample]
         unigene -->|animal,plant,bacteria,archaea,virus| rsem
         fastqc -->|reuse| rsem
+    end
+
+    subgraph qc [Assembly QC · ORF]
+        %%metro entry: left | animal,plant,bacteria,archaea,virus
+        %%metro exit: right | animal,plant,bacteria,archaea,virus
+        busco[BUSCO]
+        transdecoder[TransDecoder]
         unigene -->|animal,plant,bacteria,archaea| busco
         unigene -->|animal,plant,bacteria,archaea,virus| transdecoder
     end
 
-    subgraph annot [ANNOTATION — DB 간 순서 없음]
+    subgraph annot [Annotation — no order between DBs]
         %%metro entry: left | animal,plant,bacteria,archaea,virus
         %%metro exit: right | animal,plant,bacteria,archaea,virus
         uniprot[uniprot_euk · _pro · _arc · _virus]
         pfam[Pfam]
         eggnog[eggNOG]
         ko[KEGG ko]
-        nr[nr 482 GB]
-        corent[core_nt 272 GB]
+        nr[nr]
+        corent[core_nt]
         virusdb[virus_prot · virus_nucl]
-        ipr[INTERPROSCAN 예정]
-        kofam[KOFAM]
+        ipr[InterProScan  planned]
+        kofam[KofamScan]
         unigene -->|animal,plant,bacteria,archaea,virus| uniprot
         unigene -->|animal,plant,bacteria,archaea,virus| pfam
         unigene -->|animal,plant,bacteria,archaea,virus| eggnog
@@ -79,9 +88,9 @@ graph LR
         transdecoder -->|animal,plant,bacteria,archaea| kofam
     end
 
-    subgraph report [결과]
+    subgraph report [Report]
         %%metro entry: left | animal,plant,bacteria,archaea,virus,reuse
-        stats[결과 통합 예정]
+        stats[Result merge  planned]
         xlsx[XLSX]
         rsem -->|animal,plant,bacteria,archaea,virus,reuse| stats
         busco -->|animal,plant,bacteria,archaea| stats

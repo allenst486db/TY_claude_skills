@@ -1,173 +1,6 @@
 {
-  "title": "실제 실행 커맨드 — Nextflow 이식본",
-  "subtitle": "각 모듈의 script: 블록입니다. 도구와 옵션은 온프렘과 동일하고, 달라진 것은 배선(잡 제출·분할·재개·실패 판정)뿐입니다.",
-  "entries": [
-    {
-      "name": "파이프라인 실행",
-      "src": "nextflow.config · conf/",
-      "cmd": [
-        "nextflow run . -profile onprem,sge \\",
-        "  --samplesheet samplesheet.csv --kingdom eukaryota \\",
-        "  --lineage metazoa_odb12 --db uniprot_euk,nr,pfam,eggnog,core_nt \\",
-        "  --ko kegg --kofam kofam_euk -resume"
-      ],
-      "note": "종 분기는 conf/kingdom/{eukaryota|bacteria|archaea|virus}.config 하나로 갈립니다."
-    },
-    {
-      "name": "TRIMMOMATIC",
-      "src": "modules/local/trimmomatic.nf:56",
-      "cmd": [
-        "java -Xmx${task.memory}g -XX:ParallelGCThreads=1 -jar ${trimmomatic_jar} \\",
-        "  PE -${quality} -threads ${task.cpus} ${r1} ${r2} \\",
-        "  ${id}_1.trim.fastq ${id}_1.unpair.fastq ${id}_2.trim.fastq ${id}_2.unpair.fastq \\",
-        "  ILLUMINACLIP:${adapter}:${adapter_trim_option} ${trim_step_option}"
-      ],
-      "note": "로그에서 java.io.EOFException 을 검사합니다 — Trimmomatic 은 잘린 입력에도 exit 0 을 냅니다.",
-      "warn": true
-    },
-    {
-      "name": "TRIM_GALORE",
-      "src": "conf/tools/onprem.config · --trim_program",
-      "cmd": [
-        "trim_galore --${trim_quality} --dont_gzip --paired \\",
-        "  --path_to_cutadapt ${cutadapt_bin} ${r1} ${r2}"
-      ],
-      "note": "cutadapt 는 독립 프로세스가 아닙니다 — TrimGalore 의 백엔드로만 씁니다."
-    },
-    {
-      "name": "SEQ_STATS · FASTQC  ─ raw·trim 두 번씩",
-      "src": "modules/local/seq_stats.nf:30 · fastqc.nf:28",
-      "cmd": [
-        "seq_stats.py --fastq ${reads} --sample ${meta.id} \\",
-        "  --stage ${stage} --output ${meta.id}.${stage}.stats.tsv",
-        "${fastqc_bin} --threads ${task.cpus} --quiet --outdir . ${reads}"
-      ],
-      "note": "stage 채널이 raw/trimmed 두 갈래라 같은 프로세스를 두 번 태웁니다."
-    },
-    {
-      "name": "조립 그룹 구성  ─ samplesheet 컬럼",
-      "src": "lib/SamplesheetParser.groovy · subworkflows/local/assembly.nf:30-52",
-      "cmd": [
-        "sample,fastq_1,fastq_2,assembly_group,quant_group,assembly_fasta",
-        "  같은 assembly_group → 그 그룹으로 groupTuple (원본 merge yes)",
-        "  샘플마다 다른 그룹명 → 샘플별 조립 (원본 merge no)",
-        "  일부만 같은 그룹명 → 부분 병합"
-      ],
-      "note": "원본의 merge 스위치 + asm[N] 조합을 컬럼 하나로 대체했습니다. 조합 오류는 실행 전에 끊습니다."
-    },
-    {
-      "name": "MERGE_FASTQ",
-      "src": "modules/local/merge_fastq.nf:22",
-      "cmd": [
-        "cat ${r1} > ${group}_1.fastq",
-        "cat ${r2} > ${group}_2.fastq"
-      ],
-      "note": "도면에서는 merge 를 본선 위로 부풀린 역으로 그렸습니다 — 병합하지 않는 실행은 그 역을 들르지 않고 본선으로 지나갑니다."
-    },
-    {
-      "name": "TRINITY",
-      "src": "modules/local/trinity.nf:36",
-      "cmd": [
-        "${trinity_bin} --seqType fq --left ${r1} --right ${r2} \\",
-        "  --max_memory ${task.memory}G --no_version_check ${ss} ${jaccard} \\",
-        "  --CPU ${task.cpus} --output ${group}_trinity"
-      ],
-      "note": "--max_memory 가 task.memory 에서 나옵니다 — 인스턴스 크기와 값이 어긋나지 않습니다."
-    },
-    {
-      "name": "UNIGENE",
-      "src": "modules/local/unigene.nf:44",
-      "cmd": [
-        "longest_isoform.py --fasta ${trinity_fasta} \\",
-        "  --out-fasta ${p}.Trinity_Longest.fasta --out-map ${p}...gene_trans_map",
-        "${cdhit_est_bin} -i ${p}.Trinity_Longest.fasta -o ${p}.Trinity_Unigene.fasta \\",
-        "  -d 0 -c 0.9 -n 8 -T ${cdhit_cpus} -M ${cdhit_memory}"
-      ],
-      "note": "-M 을 params.cdhit_memory 로 뺐습니다. 동일성 검증 중에는 원본과 같은 0 을 씁니다."
-    },
-    {
-      "name": "RSEM_INDEX  ─ 그룹당 1회",
-      "src": "modules/local/rsem_index.nf:31",
-      "cmd": [
-        "${abundance_pl} --seqType fq --prep_reference \\",
-        "  --transcripts ${unigene} --gene_trans_map ${gene_trans_map} \\",
-        "  --est_method RSEM --aln_method bowtie --bowtie_RSEM \"--chunkmbs 1024\""
-      ],
-      "note": "assembly_fasta 로 들어온 그룹은 여기서 합류해 RSEM 까지만 흐릅니다."
-    },
-    {
-      "name": "RSEM  ─ 샘플별 정량",
-      "src": "modules/local/rsem.nf:30",
-      "cmd": [
-        "${abundance_pl} --seqType fq --transcripts ${unigene} \\",
-        "  --gene_trans_map ${gene_trans_map} --left=${r1} --right=${r2} \\",
-        "  ${ss} --est_method RSEM --aln_method bowtie --bowtie_RSEM \"--chunkmbs 1024\" \\",
-        "  --thread_count ${task.cpus} --output_dir ${meta.id}_rsem"
-      ]
-    },
-    {
-      "name": "BUSCO",
-      "src": "modules/local/busco.nf:42",
-      "cmd": [
-        "LINEAGE=$(readlink -f ${lineage_dir})",
-        "${busco_bin} -c ${task.cpus} -m transcriptome --config ${busco_config} \\",
-        "  --offline -l $LINEAGE -i ${unigene} -o busco_output"
-      ],
-      "note": "상대 경로 -l 은 lineage '이름' 으로 해석돼 offline 에서 실패합니다 — 절대 경로로 바꿉니다.",
-      "warn": true
-    },
-    {
-      "name": "TRANSDECODER",
-      "src": "modules/local/transdecoder.nf:32",
-      "cmd": [
-        "${transdecoder_home}/TransDecoder.LongOrfs \\",
-        "  -t ${unigene} --gene_trans_map ${gene_trans_map} ${strand}",
-        "${transdecoder_home}/TransDecoder.Predict -t ${unigene} --cpu ${task.cpus}"
-      ]
-    },
-    {
-      "name": "BLAST_CHUNK  ─ splitFasta 로 나눈 청크 = 태스크",
-      "src": "subworkflows/local/annotation.nf:87 · modules/local/blast_chunk.nf:40",
-      "cmd": [
-        ".splitFasta(by: params.seq_split, file: true, elem: 1)",
-        "${diamond_bin} ${program} -p ${task.cpus} -t ./TMP -d ${db_prefix} -q ${chunk} \\",
-        "  --more-sensitive --matrix BLOSUM62 --comp-based-stats 0 \\",
-        "  -f 5 --max-target-seqs 5 -e ${blast_evalue} -o ${out}"
-      ],
-      "note": "래퍼도 하위 잡 재제출도 없습니다. -resume 이 청크 단위로 걸려 실패한 청크만 다시 돕니다."
-    },
-    {
-      "name": "KOFAMSCAN_CHUNK",
-      "src": "modules/local/kofamscan_chunk.nf:32",
-      "cmd": [
-        "${kofamscan_home}/exec_annotation --cpu=${task.cpus} -c ${kofam_config} \\",
-        "  -e ${kofam_evalue} --tmp-dir=kofam_tmp -o ${out} ${chunk}"
-      ],
-      "note": "KofamKOALA 로 교체 예정이라 ko_annotation 서브워크플로우로 감싸 둡니다."
-    },
-    {
-      "name": "INTERPROSCAN  ─ 아직 이식하지 않음",
-      "src": "원본 runDenovoRNA.py:419-425",
-      "cmd": [
-        "# 현재 이식본에는 이 단계가 없다.",
-        "# 옮길 때 params.interproscan (기본 false) 로 뺀다."
-      ],
-      "note": "원본에는 끄는 방법이 없어 db 목록과 무관하게 매번 돌았다. 실측 4h25m.",
-      "warn": true
-    },
-    {
-      "name": "STATS · MERGE_ANNOT  ─ 아직 이식하지 않음",
-      "src": "원본 makeStatistics.py · makeResultAnnot.py",
-      "cmd": [
-        "# 현재 이식본은 RSEM·주석까지다. 아래는 붙일 형태다.",
-        "makeStatistics.py 6종 → Analysis_statistics/*.txt",
-        "makeResultAnnot.py → Assembly_Result/{G}/Expression_Profile.{G}.txt (+ .xlsx)",
-        "  Contig × {S}_Read_Count/_FPKM/_TPM × DB 별 주석 컬럼"
-      ],
-      "note": "원본은 이 단계가 실패해도 성공 플래그를 만든다 (runDenovoRNA.py:612-613).",
-      "warn": true
-    }
-  ],
+  "title": "Actual commands — Nextflow port",
+  "subtitle": "The script: block of each module. Tools and options match the on-premise pipeline; what changed is the wiring — job submission, chunking, resume and failure detection.",
   "colorize": [
     {
       "match": "uniprot_euk · _pro · _arc · _virus",
@@ -208,6 +41,183 @@
           "#e63946"
         ]
       ]
+    }
+  ],
+  "entries": [
+    {
+      "name": "Launch",
+      "src": "nextflow.config · conf/",
+      "cmd": [
+        "nextflow run . -profile onprem,sge \\",
+        "  --samplesheet samplesheet.csv --kingdom eukaryota \\",
+        "  --lineage metazoa_odb12 --db uniprot_euk,nr,pfam,eggnog,core_nt \\",
+        "  --ko kegg --kofam kofam_euk --trim_program trimmomatic -resume"
+      ],
+      "note": "The kingdom branch is one file: conf/kingdom/{eukaryota|bacteria|archaea|virus}.config."
+    },
+    {
+      "name": "TRIMMOMATIC  —  default",
+      "src": "modules/local/trimmomatic.nf:56",
+      "cmd": [
+        "java -Xmx${task.memory}g -XX:ParallelGCThreads=1 -jar ${trimmomatic_jar} \\",
+        "  PE -${quality} -threads ${task.cpus} ${r1} ${r2} \\",
+        "  ${id}_1.trim.fastq ${id}_1.unpair.fastq ${id}_2.trim.fastq ${id}_2.unpair.fastq \\",
+        "  ILLUMINACLIP:${adapter}:${adapter_trim_option} ${trim_step_option}"
+      ],
+      "note": "The log is checked for java.io.EOFException — Trimmomatic returns exit 0 on truncated input.",
+      "warn": true
+    },
+    {
+      "name": "TRIM_GALORE  —  --trim_program trim_galore",
+      "src": "modules/local/trim_galore.nf:38",
+      "cmd": [
+        "${trim_galore_bin} --${quality} --dont_gzip --paired \\",
+        "  --path_to_cutadapt ${cutadapt_bin} --cores ${task.cpus} ${reads}",
+        "mv *_val_1.fq ${id}_1.trim.fastq   # match the Trimmomatic module's output names"
+      ],
+      "note": "TrimGalore 0.6.10, path from T1_Reseq/program_lib/program_list.txt."
+    },
+    {
+      "name": "CUTADAPT  —  new in the port (--trim_program cutadapt)",
+      "src": "modules/local/cutadapt.nf:36",
+      "cmd": [
+        "${cutadapt_bin} -a ${cutadapt_adapter_r1} -A ${cutadapt_adapter_r2} \\",
+        "  --quality-cutoff ${cutadapt_quality_cutoff} --minimum-length ${cutadapt_min_length} \\",
+        "  --cores ${task.cpus} -o ${id}_1.trim.fastq -p ${id}_2.trim.fastq ${r1} ${r2}"
+      ],
+      "note": "The on-premise scripts offer only trimmomatic and trim_galore; cutadapt exists there solely as TrimGalore's engine. Here it is a process you can select, which is why it has a station on this map and none on the on-premise one."
+    },
+    {
+      "name": "SEQ_STATS · FASTQC  —  raw and trimmed, both",
+      "src": "modules/local/seq_stats.nf:30 · fastqc.nf:28",
+      "cmd": [
+        "seq_stats.py --fastq ${reads} --sample ${meta.id} \\",
+        "  --stage ${stage} --output ${meta.id}.${stage}.stats.tsv",
+        "${fastqc_bin} --threads ${task.cpus} --quiet --outdir . ${reads}"
+      ],
+      "note": "The stage channel carries raw and trimmed, so the same process runs twice."
+    },
+    {
+      "name": "RNAQC  —  not ported yet",
+      "src": "original runBTS_02.py:1040",
+      "cmd": [
+        "# order-level QC in the BTS layer; the port does not cover it yet."
+      ],
+      "note": "Shown on the map so the two diagrams line up station for station."
+    },
+    {
+      "name": "Assembly grouping  —  one samplesheet column",
+      "src": "lib/SamplesheetParser.groovy · subworkflows/local/assembly.nf:30-52",
+      "cmd": [
+        "sample,fastq_1,fastq_2,assembly_group,quant_group,assembly_fasta",
+        "  same assembly_group -> grouped by groupTuple  (original merge yes)",
+        "  a different group per sample -> assembled separately (original merge no)",
+        "  only some sharing a group -> subset merge"
+      ],
+      "note": "This one column replaces the merge switch plus the asm[N] keys. Bad combinations are rejected before the workflow starts."
+    },
+    {
+      "name": "MERGE_FASTQ",
+      "src": "modules/local/merge_fastq.nf:22",
+      "cmd": [
+        "cat ${r1} > ${group}_1.fastq",
+        "cat ${r2} > ${group}_2.fastq"
+      ],
+      "note": "A group holding one sample is filtered out by branch, so the process never runs for it (the original's ln -s / pass case)."
+    },
+    {
+      "name": "TRINITY",
+      "src": "modules/local/trinity.nf:36",
+      "cmd": [
+        "${trinity_bin} --seqType fq --left ${r1} --right ${r2} \\",
+        "  --max_memory ${task.memory}G --no_version_check ${ss} ${jaccard} \\",
+        "  --CPU ${task.cpus} --output ${group}_trinity"
+      ],
+      "note": "--max_memory now comes from task.memory, so it cannot disagree with the instance size."
+    },
+    {
+      "name": "UNIGENE",
+      "src": "modules/local/unigene.nf:44",
+      "cmd": [
+        "longest_isoform.py --fasta ${trinity_fasta} \\",
+        "  --out-fasta ${p}.Trinity_Longest.fasta --out-map ${p}...gene_trans_map",
+        "${cdhit_est_bin} -i ${p}.Trinity_Longest.fasta -o ${p}.Trinity_Unigene.fasta \\",
+        "  -d 0 -c 0.9 -n 8 -T ${cdhit_cpus} -M ${cdhit_memory}"
+      ],
+      "note": "-M is now params.cdhit_memory. It stays at the original 0 until the identity check is finished."
+    },
+    {
+      "name": "RSEM_INDEX · RSEM",
+      "src": "modules/local/rsem_index.nf:31 · rsem.nf:30",
+      "cmd": [
+        "${abundance_pl} --seqType fq --prep_reference \\",
+        "  --transcripts ${unigene} --gene_trans_map ${gene_trans_map} \\",
+        "  --est_method RSEM --aln_method bowtie --bowtie_RSEM \"--chunkmbs 1024\"",
+        "${abundance_pl} --seqType fq --transcripts ${unigene} ... \\",
+        "  --left=${r1} --right=${r2} --thread_count ${task.cpus} --output_dir ${meta.id}_rsem"
+      ],
+      "note": "Groups entering through assembly_fasta join here. Quantification always runs; it is never skipped."
+    },
+    {
+      "name": "BUSCO",
+      "src": "modules/local/busco.nf:42",
+      "cmd": [
+        "LINEAGE=$(readlink -f ${lineage_dir})",
+        "${busco_bin} -c ${task.cpus} -m transcriptome --config ${busco_config} \\",
+        "  --offline -l $LINEAGE -i ${unigene} -o busco_output"
+      ],
+      "note": "A relative -l is read as a lineage name and fails offline, so it is resolved to an absolute path.",
+      "warn": true
+    },
+    {
+      "name": "TRANSDECODER",
+      "src": "modules/local/transdecoder.nf:32",
+      "cmd": [
+        "${transdecoder_home}/TransDecoder.LongOrfs \\",
+        "  -t ${unigene} --gene_trans_map ${gene_trans_map} ${strand}",
+        "${transdecoder_home}/TransDecoder.Predict -t ${unigene} --cpu ${task.cpus}"
+      ]
+    },
+    {
+      "name": "BLAST_CHUNK  —  a chunk is a task",
+      "src": "subworkflows/local/annotation.nf:87 · modules/local/blast_chunk.nf:40",
+      "cmd": [
+        ".splitFasta(by: params.seq_split, file: true, elem: 1)",
+        "${diamond_bin} ${program} -p ${task.cpus} -t ./TMP -d ${db_prefix} -q ${chunk} \\",
+        "  --more-sensitive --matrix BLOSUM62 --comp-based-stats 0 \\",
+        "  -f 5 --max-target-seqs 5 -e ${blast_evalue} -o ${out}"
+      ],
+      "note": "No wrapper and no re-submitted sub-jobs. -resume works per chunk, so only the failed chunk is redone."
+    },
+    {
+      "name": "KOFAMSCAN_CHUNK",
+      "src": "modules/local/kofamscan_chunk.nf:32",
+      "cmd": [
+        "${kofamscan_home}/exec_annotation --cpu=${task.cpus} -c ${kofam_config} \\",
+        "  -e ${kofam_evalue} --tmp-dir=kofam_tmp -o ${out} ${chunk}"
+      ],
+      "note": "Wrapped in a ko_annotation subworkflow because KofamKOALA will replace it."
+    },
+    {
+      "name": "InterProScan  —  not ported yet",
+      "src": "original runDenovoRNA.py:419-425",
+      "cmd": [
+        "# the port does not run this step.",
+        "# when it is added: params.interproscan (default false)"
+      ],
+      "note": "The original has no way to switch it off, so it ran every time regardless of the db list. Measured 4h25m.",
+      "warn": true
+    },
+    {
+      "name": "Result merge  —  not ported yet",
+      "src": "original makeStatistics.py · makeResultAnnot.py",
+      "cmd": [
+        "# the port currently ends at RSEM and annotation. This is the shape it will take:",
+        "makeStatistics.py x6 -> Analysis_statistics/*.txt",
+        "makeResultAnnot.py -> Assembly_Result/{G}/Expression_Profile.{G}.txt (+ .xlsx)"
+      ],
+      "note": "The original writes its success flag even when this step fails (runDenovoRNA.py:612-613).",
+      "warn": true
     }
   ]
 }

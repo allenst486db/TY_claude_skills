@@ -44,9 +44,9 @@ from pathlib import Path
 MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, 'DejaVu Sans Mono', monospace"
 SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif"
 
-PAD_X, COL_GAP, HEAD_H = 60, 34, 46
-ENTRY_GAP, TITLE_SIZE, SRC_SIZE = 13, 10.5, 8.5
-CMD_SIZE, CMD_LEAD, NOTE_SIZE = 9.0, 11.5, 8.8
+PAD_X, COL_GAP, HEAD_H = 60, 40, 54
+ENTRY_GAP, TITLE_SIZE, SRC_SIZE = 16, 12.5, 9.5
+CMD_SIZE, CMD_LEAD, NOTE_SIZE = 11.0, 14.0, 10.5
 
 
 # ── 1. 움직이는 원 채색 ───────────────────────────────────────
@@ -153,12 +153,34 @@ def colorize_labels(svg: str, rules: list[dict]) -> tuple[str, int]:
 
 
 # ── 4. 커맨드 패널 ────────────────────────────────────────────
-def _measure(entries: list[dict]) -> float:
+
+def _text_w(s: str, size: float) -> float:
+    """대략적인 렌더 폭. 한글은 한 글자가 ASCII 두 배쯤 된다."""
+    return sum(1.0 if ord(c) > 0x2000 else 0.52 for c in s) * size
+
+
+def _wrap(text: str, size: float, width: float) -> list[str]:
+    """주석 한 줄을 칸 폭에 맞춰 접는다. 접지 않으면 옆 칸을 침범한다."""
+    out, cur = [], ""
+    for word in text.split(" "):
+        cand = word if not cur else cur + " " + word
+        if _text_w(cand, size) <= width:
+            cur = cand
+        else:
+            if cur:
+                out.append(cur)
+            cur = word
+    if cur:
+        out.append(cur)
+    return out or [""]
+
+
+def _measure(entries: list[dict], col_w: float) -> float:
     h = 0.0
     for e in entries:
         h += TITLE_SIZE + 4 + CMD_LEAD * len(e.get("cmd", []))
         if e.get("note"):
-            h += NOTE_SIZE + 4
+            h += (NOTE_SIZE + 3) * len(_wrap(e["note"], NOTE_SIZE, col_w)) + 3
         h += ENTRY_GAP
     return h
 
@@ -181,10 +203,12 @@ def _draw(entries: list[dict], x: float, y: float, col_w: float) -> list[str]:
                        f'font-family="{MONO}" fill="#33383d" xml:space="preserve">'
                        f'{escape(ln)}</text>')
         if e.get("note"):
-            cy += NOTE_SIZE + 4
             fill = "#b0392f" if e.get("warn") else "#6f6f6f"
-            out.append(f'<text x="{x:.1f}" y="{cy:.1f}" font-size="{NOTE_SIZE}" '
-                       f'font-family="{SANS}" fill="{fill}">{escape(e["note"])}</text>')
+            cy += 3
+            for ln in _wrap(e["note"], NOTE_SIZE, col_w):
+                cy += NOTE_SIZE + 3
+                out.append(f'<text x="{x:.1f}" y="{cy:.1f}" font-size="{NOTE_SIZE}" '
+                           f'font-family="{SANS}" fill="{fill}">{escape(ln)}</text>')
         cy += ENTRY_GAP
     return out
 
@@ -199,7 +223,7 @@ def append_panel(svg: str, panel: dict) -> str:
     col_w = (w - PAD_X * 2 - COL_GAP) / 2
     half = (len(entries) + 1) // 2
     left, right = entries[:half], entries[half:]
-    panel_h = int(HEAD_H + max(_measure(left), _measure(right)) + 22)
+    panel_h = int(HEAD_H + max(_measure(left, col_w), _measure(right, col_w)) + 26)
     new_h = h + panel_h
     mid = PAD_X + col_w + COL_GAP / 2
 
@@ -207,9 +231,9 @@ def append_panel(svg: str, panel: dict) -> str:
         f'<rect x="0" y="{h}" width="{w}" height="{panel_h}" fill="#fbfbfa"/>',
         f'<line x1="{PAD_X}" y1="{h + 0.5}" x2="{w - PAD_X}" y2="{h + 0.5}" '
         f'stroke="#dcdcdc" stroke-width="1"/>',
-        f'<text x="{PAD_X}" y="{h + 26}" font-size="13" font-family="{SANS}" '
+        f'<text x="{PAD_X}" y="{h + 28}" font-size="15" font-family="{SANS}" '
         f'font-weight="700" fill="#2b2b2b">{escape(panel.get("title", ""))}</text>',
-        f'<text x="{PAD_X}" y="{h + 40}" font-size="9" font-family="{SANS}" '
+        f'<text x="{PAD_X}" y="{h + 45}" font-size="10.5" font-family="{SANS}" '
         f'fill="#8a8a8a">{escape(panel.get("subtitle", ""))}</text>',
         f'<line x1="{mid:.1f}" y1="{h + HEAD_H - 6}" x2="{mid:.1f}" '
         f'y2="{h + panel_h - 14}" stroke="#e6e6e6" stroke-width="1"/>',
