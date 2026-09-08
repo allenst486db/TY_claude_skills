@@ -10,14 +10,12 @@
 %%metro file: xlsx | XLSX
 %%metro grid: pre | 0,0
 %%metro grid: asm | 1,0
-%%metro grid: qcorf | 2,0
-%%metro grid: annot | 3,0
-%%metro grid: annot2 | 4,0
-%%metro grid: quant | 5,0
-%%metro grid: report | 6,0
+%%metro grid: down | 2,0
+%%metro grid: report | 3,0
 
 graph LR
     subgraph pre [Pre-processing]
+        %%metro exit: right | animal,plant,bacteria,archaea,virus,reuse
         fastq[FASTQ]
         fastqstat[FastQstat]
         rnaqc[RNAQC  planned]
@@ -36,7 +34,9 @@ graph LR
     end
 
     subgraph asm [Assembly]
-        merge[merge — all or a subset]
+        %%metro entry: left | animal,plant,bacteria,archaea,virus
+        %%metro exit: right | animal,plant,bacteria,archaea,virus
+        merge[merge (all or subset)]
         trinity[Trinity]
         unigene[CD-HIT-EST]
         fastqc -->|animal,plant,bacteria,archaea,virus| merge
@@ -44,14 +44,12 @@ graph LR
         trinity -->|animal,plant,bacteria,archaea,virus| unigene
     end
 
-    subgraph qcorf [Assembly QC · ORF]
+    subgraph down [Post-assembly — no order between these]
+        %%metro entry: left | animal,plant,bacteria,archaea,virus,reuse
+        %%metro exit: right | animal,plant,bacteria,archaea,virus,reuse
         busco[BUSCO]
+        rsem[RSEM — per sample]
         transdecoder[TransDecoder]
-        unigene -->|animal,plant,bacteria,archaea| busco
-        unigene -->|animal,plant,bacteria,archaea,virus| transdecoder
-    end
-
-    subgraph annot [Annotation]
         uniprot[uniprot_euk · _pro · _arc · _virus]
         pfam[Pfam]
         eggnog[eggNOG]
@@ -59,6 +57,12 @@ graph LR
         nr[nr]
         corent[core_nt]
         virusdb[virus_prot · virus_nucl]
+        ipr[InterProScan  planned]
+        kofam[KofamScan]
+        unigene -->|animal,plant,bacteria,archaea| busco
+        unigene -->|animal,plant,bacteria,archaea,virus| rsem
+        fastqc -->|reuse| rsem
+        unigene -->|animal,plant,bacteria,archaea,virus| transdecoder
         unigene -->|animal,plant,bacteria,archaea,virus| uniprot
         unigene -->|animal,plant,bacteria,archaea,virus| pfam
         unigene -->|animal,plant,bacteria,archaea,virus| eggnog
@@ -66,22 +70,12 @@ graph LR
         unigene -->|animal,plant,bacteria,archaea,virus| nr
         unigene -->|animal,plant,bacteria,archaea,virus| corent
         unigene -->|virus| virusdb
-    end
-
-    subgraph annot2 [Annotation via ORF]
-        ipr[InterProScan  planned]
-        kofam[KofamScan]
         transdecoder -->|animal,plant,bacteria,archaea,virus| ipr
         transdecoder -->|animal,plant,bacteria,archaea| kofam
     end
 
-    subgraph quant [Quantification]
-        rsem[RSEM — per sample]
-        unigene -->|animal,plant,bacteria,archaea,virus| rsem
-        fastqc -->|reuse| rsem
-    end
-
     subgraph report [Report]
+        %%metro entry: left | animal,plant,bacteria,archaea,virus,reuse
         stats[Result merge  planned]
         xlsx[XLSX]
         rsem -->|animal,plant,bacteria,archaea,virus,reuse| stats

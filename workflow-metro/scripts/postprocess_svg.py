@@ -286,6 +286,82 @@ def draw_bypass(svg: str, station: str, label: str, colors: dict[str, str],
     return svg.replace("</svg>", "\n".join(out) + "\n</svg>"), len(out) - 1
 
 
+# ── 8. 한 영역 안에서 하위 묶음을 옅은 음영으로 표시 ─────────
+def _station_box(svg: str, sid: str):
+    """역 글리프의 (x, y) 와 그 역 라벨의 가로 폭을 돌려준다."""
+    m = re.search(r'<(?:ellipse|rect|circle)[^>]*data-station-id="%s"[^>]*>' % sid, svg)
+    if not m:
+        return None
+    a = dict(re.findall(r'([a-z-]+)="([^"]*)"', m.group(0)))
+    x = float(a["cx"]) if "cx" in a else float(a["x"]) + float(a["width"]) / 2
+    y = float(a["cy"]) if "cy" in a else float(a["y"]) + float(a["height"]) / 2
+    w = 60.0
+    lm = re.search(r'<text ([^>]*data-station-id="%s"[^>]*)>([^<]*)</text>' % sid, svg)
+    if lm:
+        fs = float(dict(re.findall(r'([a-z-]+)="([^"]*)"', lm.group(1))).get("font-size", 13))
+        w = max(w, _text_w(lm.group(2), fs) + 12)
+    return x, y, w
+
+
+def shade_groups(svg: str, groups: list[tuple[str, list[str]]],
+                 pad: float = 16.0, gap_factor: float = 1.7) -> tuple[str, int]:
+    """영역 하나 안에서 같은 성격의 역들을 옅은 음영으로 묶는다.
+
+    큰 상자를 여러 개로 쪼개면 그 상자에 정차하지 않는 노선이 우회 차선으로
+    그려진다(§6-2). 상자는 하나로 두고 안에서만 묶어 보이게 하는 방법이다.
+
+    한 묶음의 역들이 서로 다른 층(x)에 있거나 세로로 떨어져 있으면 덩어리마다
+    사각형을 하나씩 그리고 라벨은 가장 큰 덩어리에만 붙인다.
+    """
+    # 음영은 노선보다 뒤에 깔려야 한다 — 마지막 영역 상자 뒤에 끼워 넣는다.
+    anchor = None
+    for m in re.finditer(r'<rect[^>]*class="nf-metro-section-box"[^>]*/?>', svg):
+        anchor = m.end()
+    if anchor is None:
+        return svg, 0
+
+    out, top_out, n = [], [], 0
+    for label, sids in groups:
+        pts = [(sid, _station_box(svg, sid)) for sid in sids]
+        pts = [(s, b) for s, b in pts if b]
+        if not pts:
+            continue
+        by_x: dict[float, list] = {}
+        for s, (x, y, w) in pts:
+            by_x.setdefault(round(x, 1), []).append((y, w))
+        clusters = []
+        for x, ys in by_x.items():
+            ys.sort()
+            span = [ys[0]]
+            step = 68.0
+            for cur in ys[1:]:
+                if cur[0] - span[-1][0] > step * gap_factor:
+                    clusters.append((x, span)); span = [cur]
+                else:
+                    span.append(cur)
+            clusters.append((x, span))
+        biggest = max(clusters, key=lambda c: len(c[1]))
+        for x, span in clusters:
+            w = max(v[1] for v in span)
+            y0, y1 = span[0][0], span[-1][0]
+            rx0, ry0 = x - w / 2 - pad - 16, y0 - pad - 6   # 왼쪽에 묶음 이름 자리
+            rw, rh = w + pad * 2 + 16, (y1 - y0) + pad * 2 + 24
+            out.append(f'<rect x="{rx0:.1f}" y="{ry0:.1f}" width="{rw:.1f}" height="{rh:.1f}" '
+                       f'rx="7" ry="7" fill="#000000" opacity="0.045"/>')
+            if span is biggest[1]:
+                # 역 이름과 겹치지 않게, 음영 안쪽 왼쪽 가장자리에 세로로 세운다
+                top_out.append(
+                    f'<text x="{rx0 + 11:.1f}" y="{ry0 + rh / 2:.1f}" font-size="11" '
+                    f'font-family="{SANS}" font-weight="700" fill="#7a828c" '
+                    f'letter-spacing="0.1em" text-anchor="middle" '
+                    f'transform="rotate(-90 {rx0 + 11:.1f} {ry0 + rh / 2:.1f})" '
+                    f'paint-order="stroke" stroke="#ffffff" stroke-width="3.5">'
+                    f'{escape(label.upper())}</text>')
+            n += 1
+    svg = svg[:anchor] + "\n" + "\n".join(out) + svg[anchor:]
+    return svg.replace("</svg>", "\n".join(top_out) + "\n</svg>"), n
+
+
 # ── 4. 커맨드 패널 ────────────────────────────────────────────
 
 def _text_w(s: str, size: float) -> float:
@@ -438,6 +514,8 @@ def main() -> None:
     ap.add_argument("--panel", type=Path, help="커맨드 패널 JSON")
     ap.add_argument("--speedup", type=float, default=1.5)
     ap.add_argument("--order", help="영역 id 를 흐름 순서로 콤마 나열")
+    ap.add_argument("--group", action="append", default=[],
+                    help="라벨:역id1,역id2,... — 한 영역 안에서 같은 성격의 역을 옅은 음영으로 묶는다.")
     ap.add_argument("--bypass", action="append", default=[],
                     help="역id:라벨[:반폭:높이] — 그 역을 건너뛰는 우회로를 본선 위에 그린다.")
     ap.add_argument("--mirror-line", action="append", default=[],
@@ -455,6 +533,11 @@ def main() -> None:
         _pj = json.loads(a.panel.read_text(encoding="utf-8"))
         if _pj.get("colorize"):
             svg, n_col = colorize_labels(svg, _pj["colorize"])
+
+    n_grp = 0
+    if a.group:
+        gs = [(g.split(':', 1)[0], g.split(':', 1)[1].split(',')) for g in a.group]
+        svg, n_grp = shade_groups(svg, gs)
 
     n_by = 0
     for spec in a.bypass:
@@ -487,7 +570,7 @@ def main() -> None:
 
     a.output.write_text(svg, encoding="utf-8")
     print(f"{a.output}: 원 {n_balls}개 채색 · 속도 {a.speedup}배 · "
-          f"영역번호 {n_sec}개 · 라벨 {n_col}개 · 우회 {n_by}선 · 커맨드 {n_cmd}항목")
+          f"영역번호 {n_sec}개 · 묶음 {n_grp}개 · 우회 {n_by}선 · 커맨드 {n_cmd}항목")
 
 
 if __name__ == "__main__":
