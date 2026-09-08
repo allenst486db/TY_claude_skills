@@ -1,20 +1,19 @@
 %%metro legend: bl
 %%metro line_order: definition
+%%metro off_track: merge
 %%metro line: animal | Animal — conf/kingdom/eukaryota.config · lineage metazoa | #2db572
 %%metro line: plant | Plant — conf/kingdom/eukaryota.config · lineage viridiplantae | #0570b0
 %%metro line: bacteria | Bacteria — conf/kingdom/bacteria.config · uniprot_pro · kofam_prok | #f5c542
 %%metro line: archaea | Archaea — conf/kingdom/archaea.config · uniprot_arc · ko/kofam use the euk sets | #a05fb4
 %%metro line: virus | Virus — conf/kingdom/virus.config · no lineage, no kofam · virus-specific DBs | #e63946
 %%metro line: reuse | samplesheet assembly_fasta — quantification only | #ff8c00 | dashed
-%%metro line: nomerge | assembly_group per sample — each sample assembled on its own (skips MERGE_FASTQ) | #7a7a7a | dashed
 %%metro file: fastq | FASTQ
 %%metro file: xlsx | XLSX
 %%metro grid: pre | 0,0
 %%metro grid: asm | 1,0
-%%metro grid: quant | 2,0
-%%metro grid: qc | 3,0
-%%metro grid: annot | 4,0
-%%metro grid: report | 5,0
+%%metro grid: down | 2,0
+%%metro grid: annot | 3,0
+%%metro grid: report | 4,0
 
 graph LR
     subgraph pre [Pre-processing]
@@ -39,33 +38,27 @@ graph LR
     subgraph asm [Assembly]
         %%metro entry: left | animal,plant,bacteria,archaea,virus
         %%metro exit: right | animal,plant,bacteria,archaea,virus
-        merge[MERGE_FASTQ (all or subset)]
+        merge[MERGE_FASTQ — all or a subset]
         trinity[Trinity]
         unigene[Unigene]
         fastqc -->|animal,plant,bacteria,archaea,virus| merge
         merge -->|animal,plant,bacteria,archaea,virus| trinity
-        fastqc -->|nomerge| trinity
         trinity -->|animal,plant,bacteria,archaea,virus| unigene
     end
 
-    subgraph quant [Quantification]
+    subgraph down [Quant · QC · ORF]
         %%metro entry: left | animal,plant,bacteria,archaea,virus,reuse
         %%metro exit: right | animal,plant,bacteria,archaea,virus,reuse
         rsem[RSEM  per sample]
-        unigene -->|animal,plant,bacteria,archaea,virus| rsem
-        fastqc -->|reuse| rsem
-    end
-
-    subgraph qc [Assembly QC · ORF]
-        %%metro entry: left | animal,plant,bacteria,archaea,virus
-        %%metro exit: right | animal,plant,bacteria,archaea,virus
         busco[BUSCO]
         transdecoder[TransDecoder]
+        unigene -->|animal,plant,bacteria,archaea,virus| rsem
+        fastqc -->|reuse| rsem
         unigene -->|animal,plant,bacteria,archaea| busco
         unigene -->|animal,plant,bacteria,archaea,virus| transdecoder
     end
 
-    subgraph annot [Annotation — no order between DBs]
+    subgraph annot [Annotation]
         %%metro entry: left | animal,plant,bacteria,archaea,virus
         %%metro exit: right | animal,plant,bacteria,archaea,virus
         uniprot[uniprot_euk · _pro · _arc · _virus]

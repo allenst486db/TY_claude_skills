@@ -53,7 +53,8 @@
         "  --lineage metazoa_odb12 --db uniprot_euk,nr,pfam,eggnog,core_nt \\",
         "  --ko kegg --kofam kofam_euk --trim_program trimmomatic -resume"
       ],
-      "note": "The kingdom branch is one file: conf/kingdom/{eukaryota|bacteria|archaea|virus}.config."
+      "note": "The kingdom branch is one file: conf/kingdom/{eukaryota|bacteria|archaea|virus}.config.",
+      "group": "0 · Launch"
     },
     {
       "name": "TRIMMOMATIC  —  default",
@@ -65,7 +66,8 @@
         "  ILLUMINACLIP:${adapter}:${adapter_trim_option} ${trim_step_option}"
       ],
       "note": "The log is checked for java.io.EOFException — Trimmomatic returns exit 0 on truncated input.",
-      "warn": true
+      "warn": true,
+      "group": "1 · Pre-processing"
     },
     {
       "name": "TRIM_GALORE  —  --trim_program trim_galore",
@@ -75,7 +77,8 @@
         "  --path_to_cutadapt ${cutadapt_bin} --cores ${task.cpus} ${reads}",
         "mv *_val_1.fq ${id}_1.trim.fastq   # match the Trimmomatic module's output names"
       ],
-      "note": "TrimGalore 0.6.10, path from T1_Reseq/program_lib/program_list.txt."
+      "note": "TrimGalore 0.6.10, path from T1_Reseq/program_lib/program_list.txt.",
+      "group": "1 · Pre-processing"
     },
     {
       "name": "CUTADAPT  —  new in the port (--trim_program cutadapt)",
@@ -85,7 +88,8 @@
         "  --quality-cutoff ${cutadapt_quality_cutoff} --minimum-length ${cutadapt_min_length} \\",
         "  --cores ${task.cpus} -o ${id}_1.trim.fastq -p ${id}_2.trim.fastq ${r1} ${r2}"
       ],
-      "note": "The on-premise scripts offer only trimmomatic and trim_galore; cutadapt exists there solely as TrimGalore's engine. Here it is a process you can select, which is why it has a station on this map and none on the on-premise one."
+      "note": "The on-premise scripts offer only trimmomatic and trim_galore; cutadapt exists there solely as TrimGalore's engine. Here it is a process you can select, which is why it has a station on this map and none on the on-premise one.",
+      "group": "1 · Pre-processing"
     },
     {
       "name": "SEQ_STATS · FASTQC  —  raw and trimmed, both",
@@ -95,7 +99,8 @@
         "  --stage ${stage} --output ${meta.id}.${stage}.stats.tsv",
         "${fastqc_bin} --threads ${task.cpus} --quiet --outdir . ${reads}"
       ],
-      "note": "The stage channel carries raw and trimmed, so the same process runs twice."
+      "note": "The stage channel carries raw and trimmed, so the same process runs twice.",
+      "group": "1 · Pre-processing"
     },
     {
       "name": "RNAQC  —  not ported yet",
@@ -103,7 +108,8 @@
       "cmd": [
         "# order-level QC in the BTS layer; the port does not cover it yet."
       ],
-      "note": "Shown on the map so the two diagrams line up station for station."
+      "note": "Shown on the map so the two diagrams line up station for station.",
+      "group": "1 · Pre-processing"
     },
     {
       "name": "Assembly grouping  —  one samplesheet column",
@@ -114,7 +120,8 @@
         "  a different group per sample -> assembled separately (original merge no)",
         "  only some sharing a group -> subset merge"
       ],
-      "note": "This one column replaces the merge switch plus the asm[N] keys. Bad combinations are rejected before the workflow starts."
+      "note": "This one column replaces the merge switch plus the asm[N] keys. Bad combinations are rejected before the workflow starts.",
+      "group": "2 · Assembly"
     },
     {
       "name": "MERGE_FASTQ",
@@ -123,7 +130,8 @@
         "cat ${r1} > ${group}_1.fastq",
         "cat ${r2} > ${group}_2.fastq"
       ],
-      "note": "A group holding one sample is filtered out by branch, so the process never runs for it (the original's ln -s / pass case)."
+      "note": "A group holding one sample is filtered out by branch, so the process never runs for it (the original's ln -s / pass case).",
+      "group": "2 · Assembly"
     },
     {
       "name": "TRINITY",
@@ -133,7 +141,8 @@
         "  --max_memory ${task.memory}G --no_version_check ${ss} ${jaccard} \\",
         "  --CPU ${task.cpus} --output ${group}_trinity"
       ],
-      "note": "--max_memory now comes from task.memory, so it cannot disagree with the instance size."
+      "note": "--max_memory now comes from task.memory, so it cannot disagree with the instance size.",
+      "group": "2 · Assembly"
     },
     {
       "name": "UNIGENE",
@@ -144,7 +153,8 @@
         "${cdhit_est_bin} -i ${p}.Trinity_Longest.fasta -o ${p}.Trinity_Unigene.fasta \\",
         "  -d 0 -c 0.9 -n 8 -T ${cdhit_cpus} -M ${cdhit_memory}"
       ],
-      "note": "-M is now params.cdhit_memory. It stays at the original 0 until the identity check is finished."
+      "note": "-M is now params.cdhit_memory. It stays at the original 0 until the identity check is finished.",
+      "group": "2 · Assembly"
     },
     {
       "name": "RSEM_INDEX · RSEM",
@@ -156,7 +166,8 @@
         "${abundance_pl} --seqType fq --transcripts ${unigene} ... \\",
         "  --left=${r1} --right=${r2} --thread_count ${task.cpus} --output_dir ${meta.id}_rsem"
       ],
-      "note": "Groups entering through assembly_fasta join here. Quantification always runs; it is never skipped."
+      "note": "Groups entering through assembly_fasta join here. Quantification always runs; it is never skipped.",
+      "group": "3 · Quant · QC · ORF"
     },
     {
       "name": "BUSCO",
@@ -167,7 +178,8 @@
         "  --offline -l $LINEAGE -i ${unigene} -o busco_output"
       ],
       "note": "A relative -l is read as a lineage name and fails offline, so it is resolved to an absolute path.",
-      "warn": true
+      "warn": true,
+      "group": "3 · Quant · QC · ORF"
     },
     {
       "name": "TRANSDECODER",
@@ -176,7 +188,8 @@
         "${transdecoder_home}/TransDecoder.LongOrfs \\",
         "  -t ${unigene} --gene_trans_map ${gene_trans_map} ${strand}",
         "${transdecoder_home}/TransDecoder.Predict -t ${unigene} --cpu ${task.cpus}"
-      ]
+      ],
+      "group": "3 · Quant · QC · ORF"
     },
     {
       "name": "BLAST_CHUNK  —  a chunk is a task",
@@ -187,7 +200,8 @@
         "  --more-sensitive --matrix BLOSUM62 --comp-based-stats 0 \\",
         "  -f 5 --max-target-seqs 5 -e ${blast_evalue} -o ${out}"
       ],
-      "note": "No wrapper and no re-submitted sub-jobs. -resume works per chunk, so only the failed chunk is redone."
+      "note": "No wrapper and no re-submitted sub-jobs. -resume works per chunk, so only the failed chunk is redone.",
+      "group": "4 · Annotation"
     },
     {
       "name": "KOFAMSCAN_CHUNK",
@@ -196,7 +210,8 @@
         "${kofamscan_home}/exec_annotation --cpu=${task.cpus} -c ${kofam_config} \\",
         "  -e ${kofam_evalue} --tmp-dir=kofam_tmp -o ${out} ${chunk}"
       ],
-      "note": "Wrapped in a ko_annotation subworkflow because KofamKOALA will replace it."
+      "note": "Wrapped in a ko_annotation subworkflow because KofamKOALA will replace it.",
+      "group": "4 · Annotation"
     },
     {
       "name": "InterProScan  —  not ported yet",
@@ -206,7 +221,8 @@
         "# when it is added: params.interproscan (default false)"
       ],
       "note": "The original has no way to switch it off, so it ran every time regardless of the db list. Measured 4h25m.",
-      "warn": true
+      "warn": true,
+      "group": "4 · Annotation"
     },
     {
       "name": "Result merge  —  not ported yet",
@@ -217,7 +233,8 @@
         "makeResultAnnot.py -> Assembly_Result/{G}/Expression_Profile.{G}.txt (+ .xlsx)"
       ],
       "note": "The original writes its success flag even when this step fails (runDenovoRNA.py:612-613).",
-      "warn": true
+      "warn": true,
+      "group": "5 · Report"
     }
   ]
 }

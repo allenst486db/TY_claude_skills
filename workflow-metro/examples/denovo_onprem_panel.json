@@ -53,7 +53,8 @@
         "  {S}_trim_1.fastq {S}_unpair_1.fastq {S}_trim_2.fastq {S}_unpair_2.fastq \\",
         "  ILLUMINACLIP:TruSeq3-PE-2.fa:2:30:10:5:true \\",
         "  LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36"
-      ]
+      ],
+      "group": "1 · Pre-processing"
     },
     {
       "name": "Trim Galore  —  the other choice (--trim_program trim_galore)",
@@ -61,7 +62,8 @@
       "cmd": [
         "trim_galore --{trim_quality} --dont_gzip --paired [--a {AD_1} --a2 {AD_2}] \\",
         "  --path_to_cutadapt {Anaconda3}/bin/cutadapt {S}_1.fastq.gz {S}_2.fastq.gz"
-      ]
+      ],
+      "group": "1 · Pre-processing"
     },
     {
       "name": "Why Cutadapt has no station on this map",
@@ -71,7 +73,8 @@
         "trim_cmd += ' --path_to_cutadapt %s' % CUTADAPT_PATH   (line 321)"
       ],
       "note": "Cutadapt 4.4 is installed and works, but nothing calls it on its own — Trim Galore invokes it as its engine. Drawing it as a station would imply a choice that does not exist. The ported pipeline adds it as a real option, so it does appear on the Nextflow map.",
-      "warn": true
+      "warn": true,
+      "group": "1 · Pre-processing"
     },
     {
       "name": "FastQstat · FastQC  —  run on raw and trimmed, both",
@@ -81,7 +84,8 @@
         "FastQStatGz.sh pe {gz} {S}_trim {S}_trim.sqs  # trimmed",
         "fastqc -t {threads} {fastq} --nogroup --extract -o {rawData|trimmedData}_FASTQC"
       ],
-      "note": "These compare before and after trimming, so they are not a step that follows Trimmomatic in time."
+      "note": "These compare before and after trimming, so they are not a step that follows Trimmomatic in time.",
+      "group": "1 · Pre-processing"
     },
     {
       "name": "RNAQC  —  order-level QC, runs for TRR and TRS only",
@@ -90,7 +94,8 @@
         "inputRNAseqQC.sh {qc_list} {qname} -z {order_num}",
         "  -> {qc_dir}/RNA.expQC.txt"
       ],
-      "note": "De novo is appCode TRS, so this step does run. It sits in the BTS layer, not in runDenovoRNA.py."
+      "note": "De novo is appCode TRS, so this step does run. It sits in the BTS layer, not in runDenovoRNA.py.",
+      "group": "1 · Pre-processing"
     },
     {
       "name": "Assembly grouping  —  decided by merge and asm[N]",
@@ -100,7 +105,8 @@
         "merge yes + several asm[N] -> asm{N} = {group}^{S1},{S2}  (subset merge)",
         "merge no -> one group per sample (no merge at all)"
       ],
-      "note": "With a single sample, merge is forced to no regardless of the setting (runDenovoRNA.py:682)."
+      "note": "With a single sample, merge is forced to no regardless of the setting (runDenovoRNA.py:682).",
+      "group": "2 · Assembly"
     },
     {
       "name": "FASTQ merge  —  the command depends on group size",
@@ -110,7 +116,8 @@
         "1 sample, group name differs -> ln -s {S1}_1.fastq {G}_1.fastq",
         "1 sample, group name equals sample name -> nothing at all (pass)"
       ],
-      "note": "On the map MERGE sits on the straight line; the grey dashed route is the merge=no case, which never stops there."
+      "note": "On the map merge sits above the main track, so the line bulges up to it. A run with merge = no simply has nothing to do at that station.",
+      "group": "2 · Assembly"
     },
     {
       "name": "Trinity",
@@ -119,7 +126,8 @@
         "Trinity --seqType fq --left {G}_1.fastq --right {G}_2.fastq \\",
         "  --max_memory 100G --no_version_check --SS_lib_type RF --CPU 20"
       ],
-      "note": "Measured: 36h18m wall, 588.7 CPU-h, 64.0 GB peak resident."
+      "note": "Measured: 36h18m wall, 588.7 CPU-h, 64.0 GB peak resident.",
+      "group": "2 · Assembly"
     },
     {
       "name": "Unigene  —  longest isoform, CD-HIT-EST, cluster sort",
@@ -130,7 +138,8 @@
         "clstr_sort_by.pl no < {G}.Trinity_Unigene.fasta.clstr > {G}...sort.clstr"
       ],
       "note": "-M 0 means unlimited memory and -T 10 disagrees with thread(20). Both are OOM risks in the cloud.",
-      "warn": true
+      "warn": true,
+      "group": "2 · Assembly"
     },
     {
       "name": "RSEM  —  index once per group, then once per sample",
@@ -142,7 +151,8 @@
         "align_and_estimate_abundance.pl --seqType fq ... \\",
         "  --left={S}_1.fastq --right={S}_2.fastq --thread_count 20 --output_dir {S}_rsem"
       ],
-      "note": "Quantification runs for every sample of the group and is never skipped — including a run that reuses an existing assembly (runDenovoRNA.py:371-375)."
+      "note": "Quantification runs for every sample of the group and is never skipped — including a run that reuses an existing assembly (runDenovoRNA.py:371-375).",
+      "group": "3 · Quant · QC · ORF"
     },
     {
       "name": "BUSCO  —  only when the config has a lineage",
@@ -152,7 +162,8 @@
         "busco -c 20 -m transcriptome --config {BUSCO}/bin/config.ini --offline \\",
         "  -l {BUSCO_DB}/v5/lineages/{lineage} -i {G}.Trinity_Unigene.fasta -o busco_output"
       ],
-      "note": "config/virus has no lineage entry, so the Virus line never stops at BUSCO — the same reason it skips KofamScan."
+      "note": "config/virus has no lineage entry, so the Virus line never stops at BUSCO — the same reason it skips KofamScan.",
+      "group": "3 · Quant · QC · ORF"
     },
     {
       "name": "TransDecoder  —  no condition",
@@ -161,7 +172,8 @@
         "TransDecoder.LongOrfs -t {G}.Trinity_Unigene.fasta \\",
         "  --gene_trans_map {G}...gene_trans_map -S",
         "TransDecoder.Predict  -t {G}.Trinity_Unigene.fasta --cpu 20"
-      ]
+      ],
+      "group": "3 · Quant · QC · ORF"
     },
     {
       "name": "BLAST / DIAMOND  —  repeated per DB",
@@ -172,7 +184,8 @@
         "forBLAST/runBLAST.py blastn {core_nt} ... bi2.q 100000 --threads 20 --option -outfmt 5"
       ],
       "note": "runBLAST.py splits the FASTA into 100k-sequence chunks and submits sub-jobs back to SGE — a second scheduler, 7 chunks per DB.",
-      "warn": true
+      "warn": true,
+      "group": "4 · Annotation"
     },
     {
       "name": "InterProScan  —  always runs, with no switch",
@@ -181,7 +194,8 @@
         "runInterProScan.py selected.transdecoder.pep denovo AA {qname}"
       ],
       "note": "It is not in the db list and there is no way to turn it off. KofamScan right below it is guarded by 'kofam' in config_dic; this one is not. Measured 4h25m.",
-      "warn": true
+      "warn": true,
+      "group": "4 · Annotation"
     },
     {
       "name": "KofamScan  —  only when the config has a kofam entry",
@@ -189,7 +203,8 @@
       "cmd": [
         "forBLAST/runBLAST.py kofam {KOfamDB}/config.{euk|prok}.yml \\",
         "  selected.transdecoder.pep {G} bi2.q 100000"
-      ]
+      ],
+      "group": "4 · Annotation"
     },
     {
       "name": "makeStatistics  —  six categories",
@@ -198,7 +213,8 @@
         "makeStatistics.py {config} {fastq|assembly|busco|rsem|txdecoder|blastdb}",
         "  -> result_denovo/Analysis_statistics/*.txt"
       ],
-      "note": "busco joins the list only when the config has a lineage."
+      "note": "busco joins the list only when the config has a lineage.",
+      "group": "5 · Report"
     },
     {
       "name": "makeResultAnnot  —  where annotation meets quantification",
@@ -210,7 +226,8 @@
         "  -> result_denovo/Assembly_Result/{G}/Expression_Profile.{G}.txt  (+ .xlsx)"
       ],
       "note": "A failure here still writes the success flag: .error is spelled .ok at runDenovoRNA.py:612-613.",
-      "warn": true
+      "warn": true,
+      "group": "5 · Report"
     }
   ]
 }

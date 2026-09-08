@@ -47,6 +47,7 @@ SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif"
 PAD_X, COL_GAP, HEAD_H = 60, 40, 54
 ENTRY_GAP, TITLE_SIZE, SRC_SIZE = 16, 12.5, 9.5
 CMD_SIZE, CMD_LEAD, NOTE_SIZE = 11.0, 14.0, 10.5
+GROUP_SIZE, GROUP_GAP = 11.5, 20
 
 
 # ── 1. 움직이는 원 채색 ───────────────────────────────────────
@@ -176,8 +177,11 @@ def _wrap(text: str, size: float, width: float) -> list[str]:
 
 
 def _measure(entries: list[dict], col_w: float) -> float:
-    h = 0.0
+    h, group = 0.0, None
     for e in entries:
+        if e.get("group") and e["group"] != group:
+            group = e["group"]
+            h += GROUP_GAP + GROUP_SIZE + 8
         h += TITLE_SIZE + 4 + CMD_LEAD * len(e.get("cmd", []))
         if e.get("note"):
             h += (NOTE_SIZE + 3) * len(_wrap(e["note"], NOTE_SIZE, col_w)) + 3
@@ -186,8 +190,18 @@ def _measure(entries: list[dict], col_w: float) -> float:
 
 
 def _draw(entries: list[dict], x: float, y: float, col_w: float) -> list[str]:
-    out, cy = [], y
+    out, cy, group = [], y, None
     for e in entries:
+        if e.get("group") and e["group"] != group:
+            group = e["group"]
+            cy += GROUP_GAP + GROUP_SIZE
+            out.append(f'<text x="{x:.1f}" y="{cy:.1f}" font-size="{GROUP_SIZE}" '
+                       f'font-family="{SANS}" font-weight="700" fill="#2b2b2b" '
+                       f'letter-spacing="0.08em">{escape(group.upper())}</text>')
+            cy += 6
+            out.append(f'<line x1="{x:.1f}" y1="{cy:.1f}" x2="{x + col_w:.1f}" y2="{cy:.1f}" '
+                       f'stroke="#c9c9c9" stroke-width="1"/>')
+            cy += 2
         cy += TITLE_SIZE
         out.append(f'<text x="{x:.1f}" y="{cy:.1f}" font-size="{TITLE_SIZE}" '
                    f'font-family="{SANS}" font-weight="700" fill="#4a4a4a">'
@@ -221,8 +235,28 @@ def append_panel(svg: str, panel: dict) -> str:
 
     entries = panel.get("entries", [])
     col_w = (w - PAD_X * 2 - COL_GAP) / 2
-    half = (len(entries) + 1) // 2
-    left, right = entries[:half], entries[half:]
+
+    # 그룹 단위로 묶은 뒤, 두 칸의 높이가 비슷해지는 지점에서 자른다.
+    blocks: list[list[dict]] = []
+    for e in entries:
+        if blocks and e.get("group") == blocks[-1][0].get("group"):
+            blocks[-1].append(e)
+        else:
+            blocks.append([e])
+    total = _measure(entries, col_w)
+    left, acc = [], 0.0
+    cut = len(blocks)
+    for i, blk in enumerate(blocks):
+        if acc >= total / 2 and i > 0:
+            cut = i
+            break
+        acc += _measure(blk, col_w)
+    else:
+        cut = len(blocks)
+    left = [e for blk in blocks[:cut] for e in blk]
+    right = [e for blk in blocks[cut:] for e in blk]
+    if not right:
+        left, right = entries[: (len(entries) + 1) // 2], entries[(len(entries) + 1) // 2 :]
     panel_h = int(HEAD_H + max(_measure(left, col_w), _measure(right, col_w)) + 26)
     new_h = h + panel_h
     mid = PAD_X + col_w + COL_GAP / 2
