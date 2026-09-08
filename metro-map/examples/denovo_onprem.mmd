@@ -48,29 +48,45 @@ graph LR
     end
 
     subgraph annot [주석]
-        uniprot[uniprot_euk / _pro / _arc / _virus]
+        uniprot_euk[uniprot_euk]
+        uniprot_pro[uniprot_pro]
+        uniprot_arc[uniprot_arc]
+        uniprot_virus[uniprot_virus]
         pfam[pfam]
         eggnog[eggnog]
+        nr[nr]
+        corent[core_nt]
         kegg[KEGG ko]
         virusdb[virus_prot / virus_nucl]
         kofam[KofamScan]
-        nr[nr]
-        corent[core_nt]
-        unigene -->|animal,plant,bacteria,archaea,virus| uniprot
-        uniprot -->|animal,plant,bacteria,archaea,virus| pfam
-        pfam -->|animal,plant,bacteria,archaea,virus| eggnog
-        eggnog -->|animal,plant,bacteria,archaea,virus| kegg
-        kegg -->|virus| virusdb
+        unigene -->|animal,plant| uniprot_euk
+        unigene -->|bacteria| uniprot_pro
+        unigene -->|archaea| uniprot_arc
+        unigene -->|virus| uniprot_virus
+        unigene -->|animal,plant,bacteria,archaea,virus| pfam
+        unigene -->|animal,plant,bacteria,archaea,virus| eggnog
+        unigene -->|offdb| nr
+        unigene -->|offdb| corent
+        unigene -->|animal,plant,bacteria,archaea,virus| kegg
+        unigene -->|virus| virusdb
         transdecoder -->|animal,plant,bacteria,archaea| kofam
-        kegg -->|offdb| nr
-        nr -->|offdb| corent
     end
 
     subgraph report [결과]
         stats[통계 · 결과 통합]
         xlsx[XLSX]
         rsem -->|animal,plant,bacteria,archaea,virus| stats
-        kofam -->|animal,plant,bacteria,archaea| stats
+        busco -->|animal,plant,bacteria,archaea| stats
+        uniprot_euk -->|animal,plant| stats
+        uniprot_pro -->|bacteria| stats
+        uniprot_arc -->|archaea| stats
+        uniprot_virus -->|virus| stats
+        pfam -->|animal,plant,bacteria,archaea,virus| stats
+        eggnog -->|animal,plant,bacteria,archaea,virus| stats
+        kegg -->|animal,plant,bacteria,archaea,virus| stats
         virusdb -->|virus| stats
+        kofam -->|animal,plant,bacteria,archaea| stats
+        nr -->|offdb| stats
+        corent -->|offdb| stats
         stats -->|animal,plant,bacteria,archaea,virus| xlsx
     end
