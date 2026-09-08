@@ -1,0 +1,162 @@
+{
+  "title": "실제 실행 커맨드 — 온프렘 (cm541)",
+  "subtitle": "레퍼런스 run(HN00281891 · 2026-09-04~06)의 program_command/ 파일과 program_log/*.log 의 '&&' 라인, 그리고 서버 원본 스크립트에서 그대로 옮겼습니다. {} 는 실행 시 채워지는 값입니다.",
+  "entries": [
+    {
+      "name": "Trimmomatic  ─ 기본값 (--trim_program trimmomatic)",
+      "src": "program_command/sample/trimmomatic.{S}.command",
+      "cmd": [
+        "java -jar trimmomatic-0.38.jar PE -phred33 \\",
+        "  {S}_1.fastq.gz {S}_2.fastq.gz \\",
+        "  {S}_trim_1.fastq {S}_unpair_1.fastq {S}_trim_2.fastq {S}_unpair_2.fastq \\",
+        "  ILLUMINACLIP:TruSeq3-PE-2.fa:2:30:10:5:true LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36"
+      ]
+    },
+    {
+      "name": "TrimGalore  ─ 택일 (--trim_program trim_galore)",
+      "src": "runSeqTrim.py:300-325",
+      "cmd": [
+        "trim_galore --{trim_quality} --dont_gzip --paired [--a {AD_1} --a2 {AD_2}] \\",
+        "  --path_to_cutadapt {Anaconda3}/bin/cutadapt {S}_1.fastq.gz {S}_2.fastq.gz"
+      ],
+      "note": "cutadapt(4.4)는 설치돼 있지만 독립 단계가 아닙니다 — TrimGalore 가 내부에서만 호출합니다."
+    },
+    {
+      "name": "FastQstat · FastQC  ─ raw 와 trim 양쪽에 각각",
+      "src": "runSeqTrim.py:421-422, 482-487",
+      "cmd": [
+        "FastQStatGz.sh pe {gz} {S} {S}.sqs            # raw",
+        "FastQStatGz.sh pe {gz} {S}_trim {S}_trim.sqs  # trim",
+        "fastqc -t {threads} {fastq} --nogroup --extract -o {rawData|trimmedData}_FASTQC"
+      ],
+      "note": "트림 앞뒤를 비교하는 단계라 Trimmomatic 과 순서 관계가 아닙니다."
+    },
+    {
+      "name": "조립 그룹 구성  ─ merge 값이 결정",
+      "src": "manipulator.py:40-85",
+      "cmd": [
+        "merge yes · asm1 하나 → 전체 샘플이 한 그룹",
+        "merge yes · asm[N] 여러 개 → asm{N} = {그룹명}^{S1},{S2} 로 그룹마다 지정",
+        "merge no → 샘플마다 그룹 하나 (병합 없음)"
+      ],
+      "note": "샘플이 1개뿐이면 merge 값과 무관하게 no 로 강제됩니다 (runDenovoRNA.py:682)."
+    },
+    {
+      "name": "FASTQ 병합  ─ 그룹 안 샘플 수로 명령이 갈림",
+      "src": "runFASTQ_Merge.py:61-69",
+      "cmd": [
+        "그룹에 2개 이상 → cat {S1}_1.fastq {S2}_1.fastq > {G}_1.fastq",
+        "1개 · 그룹명 ≠ 샘플명 → ln -s {S1}_1.fastq {G}_1.fastq",
+        "1개 · 그룹명 = 샘플명 → 아무것도 하지 않음 (pass)"
+      ]
+    },
+    {
+      "name": "Trinity",
+      "src": "NF_Assembly.TRINITY.*.log",
+      "cmd": [
+        "Trinity --seqType fq --left {G}_1.fastq --right {G}_2.fastq \\",
+        "  --max_memory 100G --no_version_check --SS_lib_type RF --CPU 20"
+      ],
+      "note": "실측 36h18m · 588.7 CPU-h · 최대 상주 64.0 GB (로그의 elapsed/user/maxresident)."
+    },
+    {
+      "name": "Unigene  ─ 최장 isoform → CD-HIT-EST → 정렬",
+      "src": "runTrinity.py:271",
+      "cmd": [
+        "cd-hit-est -i {G}.Trinity_Longest.fasta -o {G}.Trinity_Unigene.fasta \\",
+        "  -d 0 -c 0.9 -n 8 -T 10 -M 0",
+        "clstr_sort_by.pl no < {G}.Trinity_Unigene.fasta.clstr > {G}...sort.clstr"
+      ],
+      "note": "-M 0 은 메모리 무제한 · -T 10 은 thread(20) 와 불일치. 클라우드에서 OOM 위험.",
+      "warn": true
+    },
+    {
+      "name": "RSEM index  ─ 그룹당 1회",
+      "src": "runTrinity.py:303",
+      "cmd": [
+        "align_and_estimate_abundance.pl --seqType fq --prep_reference \\",
+        "  --transcripts {G}.Trinity_Unigene.fasta --gene_trans_map {G}...gene_trans_map \\",
+        "  --est_method RSEM --aln_method bowtie --bowtie_RSEM \"--chunkmbs 1024\""
+      ],
+      "note": "기존 조립을 재사용하는 실행(주황 점선)의 실질적 진입점입니다."
+    },
+    {
+      "name": "RSEM  ─ 샘플별 정량",
+      "src": "runRSEM.py:105-106",
+      "cmd": [
+        "align_and_estimate_abundance.pl --seqType fq \\",
+        "  --transcripts {G}.Trinity_Unigene.fasta --gene_trans_map {G}...gene_trans_map \\",
+        "  --left={S}_1.fastq --right={S}_2.fastq --SS_lib_type RF \\",
+        "  --est_method RSEM --aln_method bowtie --bowtie_RSEM \"--chunkmbs 1024\" \\",
+        "  --thread_count 20 --output_dir {S}_rsem"
+      ]
+    },
+    {
+      "name": "BUSCO  ─ lineage 항목이 있을 때만",
+      "src": "runBUSCO.py:83-85",
+      "cmd": [
+        "busco -c 20 -m transcriptome --config {BUSCO}/bin/config.ini --offline \\",
+        "  -l {BUSCO_DB}/v5/lineages/{lineage} -i {G}.Trinity_Unigene.fasta -o busco_output"
+      ],
+      "note": "virus 프리셋에는 lineage 가 없어 이 단계가 통째로 빠집니다."
+    },
+    {
+      "name": "TransDecoder",
+      "src": "runTransdecoder.py:86,92",
+      "cmd": [
+        "TransDecoder.LongOrfs -t {G}.Trinity_Unigene.fasta \\",
+        "  --gene_trans_map {G}...gene_trans_map -S",
+        "TransDecoder.Predict  -t {G}.Trinity_Unigene.fasta --cpu 20"
+      ]
+    },
+    {
+      "name": "BLAST / DIAMOND  ─ DB 마다 같은 형태로 반복",
+      "src": "NF_Assembly.ANNOT.*.log",
+      "cmd": [
+        "forBLAST/runBLAST.py blastx {DB}.dmnd {G}.Trinity_Unigene.fasta Trinity_{db_key} \\",
+        "  bi2.q 100000 --threads 20 --align_tool diamond --run_parse no",
+        "forBLAST/runBLAST.py blastn {core_nt} ... bi2.q 100000 --threads 20 --option -outfmt 5"
+      ],
+      "note": "runBLAST.py 가 10만 서열씩 쪼개 SGE 에 하위 잡을 다시 제출합니다 (2차 스케줄러 · DB 당 7청크).",
+      "warn": true
+    },
+    {
+      "name": "InterProScan  ─ 조건 없이 항상 실행",
+      "src": "runDenovoRNA.py:419-425 · runInterProScan.py:84",
+      "cmd": [
+        "runInterProScan.py selected.transdecoder.pep denovo AA bi2.q"
+      ],
+      "note": "db 목록에도 없고 켜고 끄는 스위치도 없습니다. TransDecoder 가 끝나면 무조건 돕니다.",
+      "warn": true
+    },
+    {
+      "name": "KofamScan  ─ kofam 항목이 있을 때만",
+      "src": "runKoFamScan.py:84",
+      "cmd": [
+        "forBLAST/runBLAST.py kofam {KOfamDB}/config.{euk|prok}.yml \\",
+        "  selected.transdecoder.pep {G} bi2.q 100000"
+      ]
+    },
+    {
+      "name": "makeStatistics  ─ 6종",
+      "src": "makeStat.sh · runDenovoRNA.py:598-611",
+      "cmd": [
+        "makeStatistics.py {config} {fastq|assembly|busco|rsem|txdecoder|blastdb}",
+        "  → result_denovo/Analysis_statistics/{Assembly,BUSCO,RSEM_mapping,ORF_Prediction}_stats.txt"
+      ],
+      "note": "busco 항목은 config 에 lineage 가 있을 때만 목록에 들어갑니다."
+    },
+    {
+      "name": "makeResultAnnot  ─ 주석 × 샘플별 정량 결합",
+      "src": "makeResultAnnot.py:110-142, 365-399",
+      "cmd": [
+        "makeResultAnnot.py {config} --kegg_ver {ver}",
+        "  {S}/{S}_rsem/RSEM.genes.results → {S}_Read_Count · {S}_FPKM · {S}_TPM 컬럼",
+        "  + DB 별 주석 컬럼(UniProt·NR·Pfam·EggNOG·Core_NT·InterPro·KoFam·KO)",
+        "  → result_denovo/Assembly_Result/{G}/Expression_Profile.{G}.txt (+ .xlsx)"
+      ],
+      "note": "실패해도 stat.annot.ok 를 만듭니다 — .error 자리에 .ok 가 들어가 있습니다 (runDenovoRNA.py:612-613).",
+      "warn": true
+    }
+  ]
+}

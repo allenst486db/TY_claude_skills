@@ -1,7 +1,7 @@
 {
   "$comment": "이 PC의 Claude Code 환경 전체 명세. setup/install.mjs 가 이 파일만 읽고 다른 PC에 동일한 환경을 재현한다. 기존 항목은 건너뛰거나 업데이트하며, 절대 조용히 덮어쓰지 않는다.",
   "version": 2,
-  "updatedAt": "2026-07-25",
+  "updatedAt": "2026-09-08",
 
   "vendoredSkills": [
     {
@@ -10,9 +10,9 @@
       "note": "이 리포에 직접 담겨 있다. clone/pull 만으로 사용 가능."
     },
     {
-      "name": "metro-map",
+      "name": "workflow-metro",
       "purpose": "파이프라인/워크플로우를 nf-core 스타일 지하철 노선도 SVG 로 그린다",
-      "note": "이 리포에 직접 담겨 있다. 렌더러는 별도 설치: pip install nf-metro"
+      "note": "이 리포에 직접 담겨 있다. 렌더러는 별도 설치: pip install nf-metro (실제로 오는 것은 0.7.2). 예전 이름은 metro-map 이었다 — 다른 PC 에 남아 있으면 ~/.claude/skills/metro-map 을 지운다."
     }
   ],
 

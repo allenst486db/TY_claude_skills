@@ -1,0 +1,122 @@
+%%metro title: T2_Denovo Nextflow — 종(kingdom)별 분기 노선도
+%%metro style: light
+%%metro legend: bl
+%%metro line_order: definition
+%%metro line: animal | Animal — conf/kingdom/eukaryota.config · lineage metazoa | #2db572
+%%metro line: plant | Plant — conf/kingdom/eukaryota.config · lineage viridiplantae | #0570b0
+%%metro line: bacteria | Bacteria — conf/kingdom/bacteria.config · uniprot_pro · kofam_prok | #f5c542
+%%metro line: archaea | Archaea — conf/kingdom/archaea.config · uniprot_arc · ko·kofam 은 euk | #a05fb4
+%%metro line: virus | Virus — conf/kingdom/virus.config · lineage·kofam 없음 → 채널이 비어 스킵 | #e63946
+%%metro line: reuse | samplesheet assembly_fasta — RSEM 정량만 실행 | #ff8c00 | dashed
+%%metro file: fastq | FASTQ
+%%metro file: rsemidx | FASTA
+%%metro file: xlsx | XLSX
+%%metro grid: pre | 0,0
+%%metro grid: asm | 1,0
+%%metro grid: post | 2,0
+%%metro grid: annot | 0,1,1,3
+%%metro grid: report | 3,1
+
+graph LR
+    subgraph pre [PREPROCESS — 트림 도구는 택일]
+        fastq[FASTQ]
+        trim[TRIMMOMATIC]
+        trimgalore[TRIM_GALORE]
+        fastqstat[SEQ_STATS]
+        fastqc[FASTQC]
+        statmerge[SUMMARY]
+        fastq -->|animal,plant,bacteria,archaea,virus,reuse| trim
+        fastq -->|animal,plant,bacteria,archaea,virus,reuse| trimgalore
+        trim -->|animal,plant,bacteria,archaea,virus,reuse| fastqstat
+        trim -->|animal,plant,bacteria,archaea,virus,reuse| fastqc
+        trimgalore -->|animal,plant,bacteria,archaea,virus,reuse| fastqstat
+        trimgalore -->|animal,plant,bacteria,archaea,virus,reuse| fastqc
+        fastqstat -->|animal,plant,bacteria,archaea,virus,reuse| statmerge
+        fastqc -->|animal,plant,bacteria,archaea,virus,reuse| statmerge
+    end
+
+    subgraph asm [ASSEMBLY — 그룹 구성에 따라 세 갈래]
+        mrgcat[MERGE_FASTQ · 다수 샘플]
+        mrglink[단일 샘플 · 그대로 통과]
+        mrgnone[샘플별 그룹 · 병합 없음]
+        trinity[TRINITY]
+        unigene[UNIGENE]
+        rsemidx[RSEM_INDEX]
+        statmerge -->|animal,plant,bacteria,archaea,virus| mrgcat
+        statmerge -->|animal,plant,bacteria,archaea,virus| mrglink
+        statmerge -->|animal,plant,bacteria,archaea,virus| mrgnone
+        mrgcat -->|animal,plant,bacteria,archaea,virus| trinity
+        mrglink -->|animal,plant,bacteria,archaea,virus| trinity
+        mrgnone -->|animal,plant,bacteria,archaea,virus| trinity
+        trinity -->|animal,plant,bacteria,archaea,virus| unigene
+        unigene -->|animal,plant,bacteria,archaea,virus| rsemidx
+        statmerge -->|reuse| rsemidx
+    end
+
+    subgraph post [정량 · 조립 QC]
+        %%metro exit: bottom | animal,plant,bacteria,archaea,virus,reuse
+        rsem[RSEM]
+        busco[BUSCO]
+        transdecoder[TRANSDECODER]
+        rsemidx -->|animal,plant,bacteria,archaea,virus,reuse| rsem
+        rsemidx -->|animal,plant,bacteria,archaea| busco
+        rsemidx -->|animal,plant,bacteria,archaea,virus| transdecoder
+    end
+
+    subgraph annot [ANNOTATION — DB 간 순서 없음 · 전부 병렬 실행]
+        split[splitFasta]
+        uniprot_euk[uniprot_euk 41 GB]
+        uniprot_pro[uniprot_pro]
+        uniprot_arc[uniprot_arc]
+        uniprot_virus[uniprot_virus]
+        virus_prot[virus_prot]
+        virus_nucl[virus_nucl]
+        pfam[Pfam 14 GB]
+        eggnog[eggNOG 9 GB]
+        ko[KEGG ko]
+        nr[nr 482 GB]
+        corent[core_nt 514 GB]
+        ipr[INTERPROSCAN]
+        kofam[KOFAM]
+        unigene -->|animal,plant,bacteria,archaea,virus| split
+        split -->|animal,plant| uniprot_euk
+        split -->|bacteria| uniprot_pro
+        split -->|archaea| uniprot_arc
+        split -->|virus| uniprot_virus
+        split -->|virus| virus_prot
+        split -->|virus| virus_nucl
+        split -->|animal,plant,bacteria,archaea,virus| pfam
+        split -->|animal,plant,bacteria,archaea,virus| eggnog
+        split -->|animal,plant,bacteria,archaea,virus| ko
+        split -->|animal,plant,bacteria,archaea,virus| nr
+        split -->|animal,plant,bacteria,archaea,virus| corent
+        transdecoder -->|animal,plant,bacteria,archaea,virus| ipr
+        transdecoder -->|animal,plant,bacteria,archaea| kofam
+    end
+
+    subgraph report [통계 · 결과]
+        makestat[STATS]
+        resultannot[MERGE_ANNOT]
+        exprofile[Expression_Profile]
+        xlsx[XLSX]
+        rsem -->|animal,plant,bacteria,archaea,virus,reuse| makestat
+        busco -->|animal,plant,bacteria,archaea| makestat
+        transdecoder -->|animal,plant,bacteria,archaea,virus| makestat
+        rsem -->|animal,plant,bacteria,archaea,virus,reuse| resultannot
+        uniprot_euk -->|animal,plant| resultannot
+        uniprot_pro -->|bacteria| resultannot
+        uniprot_arc -->|archaea| resultannot
+        uniprot_virus -->|virus| resultannot
+        virus_prot -->|virus| resultannot
+        virus_nucl -->|virus| resultannot
+        pfam -->|animal,plant,bacteria,archaea,virus| resultannot
+        eggnog -->|animal,plant,bacteria,archaea,virus| resultannot
+        ko -->|animal,plant,bacteria,archaea,virus| resultannot
+        nr -->|animal,plant,bacteria,archaea,virus| resultannot
+        corent -->|animal,plant,bacteria,archaea,virus| resultannot
+        ipr -->|animal,plant,bacteria,archaea,virus| resultannot
+        kofam -->|animal,plant,bacteria,archaea| resultannot
+        resultannot -->|animal,plant,bacteria,archaea,virus,reuse| exprofile
+        makestat -->|animal,plant,bacteria,archaea,virus,reuse| xlsx
+        exprofile -->|animal,plant,bacteria,archaea,virus,reuse| xlsx
+    end
