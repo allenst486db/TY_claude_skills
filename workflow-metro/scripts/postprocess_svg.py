@@ -288,9 +288,12 @@ def draw_bypass(svg: str, station: str, label: str, colors: dict[str, str],
         if y is None:
             continue
         ty = y + sign * height
+        # nf-metro 갈래와 같은 비례: 짧게 직진 → 가파른 사선 → 긴 평행 → 사선 → 직진.
+        # 사선이 짧으면 모서리 곡선에 먹혀 뭉개진 모양이 된다.
         x0, x3 = cx - half_w, cx + half_w
-        pts = [(x0, y), (cx - half_w * 0.74, y), (cx - half_w * 0.30, ty),
-               (cx + half_w * 0.30, ty), (cx + half_w * 0.74, y), (x3, y)]
+        lead, diag = 8.0, 26.0
+        pts = [(x0, y), (x0 + lead, y), (x0 + lead + diag, ty),
+               (x3 - lead - diag, ty), (x3 - lead, y), (x3, y)]
         d = corner(pts)
         arcs[lid] = d
         out.append(f'<path d="{d}" stroke="{colors[lid]}" stroke-width="4.0" fill="none" '
